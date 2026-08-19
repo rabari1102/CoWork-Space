@@ -21,7 +21,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4000
-      TZ: UTC
+      TLZ: UTC
       DATABASE_URL: postgresql://cowork:cowork@db:5432/cowork
       JWT_ACCESS_SECRET: dev-access-secret-change-me
       JWT_REFRESH_SECRET: dev-refresh-secret-change-me

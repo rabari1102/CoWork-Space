@@ -210,7 +210,7 @@ Indexes exist on everything the app filters or searches by:
 
 Times are stored as `TIMESTAMP` without a time zone and are always read as venue local
 time. There is one site, so there is nothing to convert between, and it keeps the
-calendar honest: what a member picks is exactly what is stored and displayed. Set `TZ`
+calendar honest: what a member picks is exactly what is stored and displayed. Set `TLZ`
 on the backend to the venue's zone (`docker-compose.yml` uses UTC).
 
 ---
@@ -294,7 +294,7 @@ Backend environment variables:
 | `JWT_ACCESS_SECRET`                   | a long random string                             |
 | `JWT_REFRESH_SECRET`                  | a different long random string                   |
 | `CORS_ORIGIN`                         | the frontend's deployed URL, no trailing slash   |
-| `TZ`                                  | the venue's timezone, e.g. `UTC`                 |
+| `TLZ`                                  | the venue's timezone, e.g. `UTC`                 |
 
 Frontend environment variable: `VITE_API_URL` set to
 `https://<backend-project>.vercel.app/api`. It is read at build time, so
