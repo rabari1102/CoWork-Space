@@ -1,7 +1,15 @@
+import { fileURLToPath } from 'node:url';
 import { createApp } from './app.js';
 import { config } from './config/env.js';
 import { runMigrations } from './db/migrate.js';
 import { pool } from './db/pool.js';
+
+const app = createApp();
+
+// Vercel imports this module and drives the exported app itself, so the
+// bootstrap below is guarded: it only runs when the file is executed directly,
+// which is what Docker and `npm run dev` do.
+export default app;
 
 /** Waits for Postgres to accept connections; the DB container may still be booting. */
 async function waitForDatabase(attempts = 15) {
@@ -21,7 +29,7 @@ async function start() {
   await waitForDatabase();
   await runMigrations();
 
-  const server = createApp().listen(config.port, () => {
+  const server = app.listen(config.port, () => {
     console.log(`API listening on http://localhost:${config.port} (${config.env})`);
   });
 
@@ -32,7 +40,9 @@ async function start() {
   }
 }
 
-start().catch((error) => {
-  console.error('failed to start server:', error.message);
-  process.exit(1);
-});
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  start().catch((error) => {
+    console.error('failed to start server:', error.message);
+    process.exit(1);
+  });
+}

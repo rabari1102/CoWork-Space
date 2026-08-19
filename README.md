@@ -260,6 +260,59 @@ docker-compose.yml
 
 ---
 
+## Deploying to Vercel
+
+The repo deploys as **two Vercel projects from the same repository**, plus a
+managed Postgres. Vercel does not host a database, and the schema needs the
+`btree_gist` and `pg_trgm` extensions, so the provider has to support them -
+Neon and Supabase both do.
+
+| Project  | Root directory | Framework preset  |
+| -------- | -------------- | ----------------- |
+| Backend  | `backend`      | Express (detected) |
+| Frontend | `frontend`     | Vite (detected)    |
+
+The backend needs no adapter: Vercel detects `src/server.js`, and that file
+exports the Express app as its default export. The bootstrap that waits for the
+database, runs migrations and calls `listen()` is guarded so it only runs when
+the file is executed directly, which is what Docker and `npm run dev` do.
+
+Migrations are **not** run on deploy - a serverless function has no boot step to
+hang them off, and concurrent cold starts would race. Point `DATABASE_URL` at
+the new database and run them once from your machine:
+
+```bash
+cd backend
+npm run seed          # runs migrations, then loads the demo data
+```
+
+Backend environment variables:
+
+| Variable                              | Value                                            |
+| ------------------------------------- | ------------------------------------------------ |
+| `DATABASE_URL`                        | the provider's **pooled** connection string      |
+| `JWT_ACCESS_SECRET`                   | a long random string                             |
+| `JWT_REFRESH_SECRET`                  | a different long random string                   |
+| `CORS_ORIGIN`                         | the frontend's deployed URL, no trailing slash   |
+| `TZ`                                  | the venue's timezone, e.g. `UTC`                 |
+
+Frontend environment variable: `VITE_API_URL` set to
+`https://<backend-project>.vercel.app/api`. It is read at build time, so
+changing it needs a redeploy.
+
+`frontend/vercel.json` rewrites every path to `index.html`; without it a deep
+link such as `/admin/bookings` returns 404 because React Router owns that route
+on the client, not the CDN.
+
+Two caveats that come with serverless rather than with this code:
+
+- **Rate limiting is per instance.** `express-rate-limit` keeps its counters in
+  memory, so each function instance enforces its own budget. It still works, but
+  it is weaker than the single-process limit you get under Docker. A shared
+  store (Redis) is the production answer.
+- **Use the pooled connection string.** Each instance opens its own pool, so
+  connecting direct will exhaust the database's connection limit under load.
+
 ## What is not included
 
 - Email is a stub. `utils/notifier.js` logs the message that would have been sent on
