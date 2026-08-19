@@ -78,12 +78,14 @@ export default function MemberDashboard() {
     ['pending', 'approved'].includes(booking.status) && new Date(booking.startsAt) > new Date();
 
   return (
-    <>
+    <div className="page">
       <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <span className="eyebrow">Account</span>
-          <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">My bookings</h1>
-          <p className="mt-1 text-slate-500">
+          <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-navy-900 md:text-4xl">
+            My bookings
+          </h1>
+          <p className="mt-2 text-slate-500">
             Track your workspace reservations and manage upcoming requests.
           </p>
         </div>
@@ -219,6 +221,6 @@ export default function MemberDashboard() {
           onClose={() => setCancelTarget(null)}
         />
       )}
-    </>
+    </div>
   );
 }

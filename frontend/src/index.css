@@ -22,9 +22,9 @@
     --warning: 245 158 11;
     --destructive: 225 29 72;
 
-    --gradient-hero: linear-gradient(135deg, #0b1220 0%, #16243f 55%, #12766d 130%);
-    --gradient-brand: linear-gradient(120deg, #23b5a6 0%, #06b6d4 100%);
-    --gradient-line: linear-gradient(90deg, transparent, #23b5a6, #06b6d4, transparent);
+    --gradient-hero: radial-gradient(120% 120% at 50% 0%, #0e1e3e 0%, #070e1e 65%, #051824 100%);
+    --gradient-brand: linear-gradient(135deg, #2dd4bf 0%, #38bdf8 100%);
+    --gradient-line: linear-gradient(90deg, transparent, #2dd4bf, #38bdf8, transparent);
   }
 
   body {
@@ -89,6 +89,12 @@
   }
   .glass-dark {
     @apply bg-navy-900/60 backdrop-blur-xl ring-1 ring-white/10;
+  }
+
+  /* Standard page gutter. Lives here so the hero can sit outside it and run
+     edge to edge while every other section stays aligned. */
+  .page {
+    @apply mx-auto w-full max-w-[1200px] px-4 py-8 sm:px-6 lg:px-8;
   }
 
   .eyebrow {

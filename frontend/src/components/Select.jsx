@@ -99,8 +99,9 @@ export default function Select({
 
   const triggerClass =
     variant === 'bare'
-      ? 'flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-600 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500'
+      ? 'flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:text-navy-900 focus:outline-none transition-colors'
       : 'field flex items-center justify-between gap-2 text-left';
+
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
@@ -133,7 +134,7 @@ export default function Select({
           id={listId}
           role="listbox"
           aria-label={ariaLabel}
-          className="absolute z-30 mt-1 max-h-60 w-full min-w-[10rem] animate-fade-in overflow-y-auto rounded-lg bg-white p-1 shadow-modal ring-1 ring-slate-200"
+          className="absolute left-0 top-full z-50 mt-2 max-h-60 w-full min-w-[12rem] animate-scale-in overflow-y-auto rounded-2xl bg-white p-1.5 shadow-2xl ring-1 ring-slate-200/90"
         >
           {options.map((option, index) => {
             const isSelected = option.value === value;
@@ -147,12 +148,12 @@ export default function Select({
                 data-active={isActive}
                 onMouseEnter={() => setActiveIndex(index)}
                 onClick={() => choose(index)}
-                className={`flex cursor-pointer items-center justify-between gap-2 rounded-md px-3 py-2 text-sm ${
+                className={`flex cursor-pointer items-center justify-between gap-2 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors ${
                   isActive ? 'bg-brand-50 text-brand-700' : 'text-slate-700'
-                } ${isSelected ? 'font-medium' : ''}`}
+                } ${isSelected ? 'font-bold text-brand-700 bg-brand-50/60' : ''}`}
               >
                 <span className="truncate">{option.label}</span>
-                {isSelected && <i className="ph ph-check shrink-0 text-brand-600" />}
+                {isSelected && <i className="ph ph-check shrink-0 text-brand-600 font-bold" />}
               </li>
             );
           })}

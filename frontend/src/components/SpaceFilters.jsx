@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import DatePicker from './DatePicker.jsx';
 import Select from './Select.jsx';
+import { todayIso } from '../utils/format.js';
 
 const TYPE_OPTIONS = [
   { value: '', label: 'All spaces' },
@@ -59,8 +61,16 @@ export default function SpaceFilters({ value, onApply, onReset }) {
         <label className="label" htmlFor="filter-date">
           Available on
         </label>
-        <input id="filter-date" type="date" className="field" value={draft.date} onChange={update('date')} />
+        <DatePicker
+          id="filter-date"
+          ariaLabel="Available on"
+          min={todayIso()}
+          placeholder="Choose a date..."
+          value={draft.date}
+          onChange={(val) => setDraft((curr) => ({ ...curr, date: val }))}
+        />
       </div>
+
 
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -113,59 +123,63 @@ export default function SpaceFilters({ value, onApply, onReset }) {
       {/* Desktop toolbar */}
       <form
         onSubmit={submit}
-        className="relative z-10 mb-8 hidden items-center gap-2 rounded-xl bg-white p-2 shadow-sm ring-1 ring-slate-200 md:flex"
+        className="relative z-10 mb-8 hidden items-center gap-3 rounded-2xl bg-white p-2 shadow-sm ring-1 ring-slate-200 md:flex"
       >
-        <div className="flex flex-1 items-center border-r border-slate-200 px-3">
-          <i className="ph ph-magnifying-glass mr-2 text-lg text-slate-400" />
+        <div className="flex flex-1 items-center gap-2 px-3 py-1">
+          <i className="ph ph-magnifying-glass text-lg text-slate-400 shrink-0" />
           <input
             type="text"
             placeholder="Search spaces..."
             aria-label="Search spaces"
-            className="w-full border-none bg-transparent py-2 text-sm focus:ring-0"
+            className="w-full border-none bg-transparent p-0 text-sm font-medium text-navy-900 placeholder:text-slate-400 focus:outline-none focus:ring-0"
             value={draft.search}
             onChange={update('search')}
           />
         </div>
 
-        <Select
-          ariaLabel="Space type"
-          variant="bare"
-          options={TYPE_OPTIONS}
-          value={draft.type}
-          onChange={setField('type')}
-        />
+        <div className="h-6 w-px bg-slate-200 shrink-0" />
 
-        <div className="h-6 w-px bg-slate-200" />
+        <div className="min-w-[140px]">
+          <Select
+            ariaLabel="Space type"
+            variant="bare"
+            options={TYPE_OPTIONS}
+            value={draft.type}
+            onChange={setField('type')}
+          />
+        </div>
+
+        <div className="h-6 w-px bg-slate-200 shrink-0" />
 
         <div className="relative" ref={popoverRef}>
           <button
             type="button"
             onClick={() => setPopoverOpen((open) => !open)}
             aria-expanded={popoverOpen}
-            className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900"
+            className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:text-navy-900 transition-colors"
           >
-            Date &amp; capacity
+            <span>Date &amp; capacity</span>
             {refinementCount > 0 && (
-              <span className="ml-1.5 rounded bg-brand-50 px-1.5 py-0.5 text-xs font-semibold text-brand-700">
+              <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700">
                 {refinementCount}
               </span>
             )}
-            <i className="ph ph-caret-down ml-1 inline-block" />
+            <i className={`ph ph-caret-down text-xs text-slate-400 transition-transform ${popoverOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {popoverOpen && (
-            <div className="absolute right-0 top-full z-20 mt-2 w-72 animate-fade-in space-y-4 rounded-xl bg-white p-4 shadow-modal ring-1 ring-slate-200">
+            <div className="absolute right-0 top-full z-20 mt-2 w-72 animate-fade-in space-y-4 rounded-2xl bg-white p-4 shadow-modal ring-1 ring-slate-200">
               {dateAndCapacityFields}
             </div>
           )}
         </div>
 
-        <div className="h-6 w-px bg-slate-200" />
+        <div className="h-6 w-px bg-slate-200 shrink-0" />
 
-        <button type="button" onClick={clear} className="px-3 py-2 text-sm font-medium text-slate-500 hover:text-slate-900">
+        <button type="button" onClick={clear} className="rounded-xl px-3 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors">
           Clear
         </button>
-        <button type="submit" className="btn-primary ml-1 px-5">
+        <button type="submit" className="btn-primary px-6">
           Apply filters
         </button>
       </form>

@@ -1,40 +1,34 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { prefersReducedMotion, useInView } from '../hooks/useInView.js';
 
-const reduceMotion = () =>
-  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-/** Counts from zero to `value` the first time it scrolls into view. */
+/**
+ * Counts up to `value` once it is on screen. Re-runs if the number arrives
+ * after the element was already visible, which is the normal case here: the
+ * markup renders before the API call that supplies the total resolves.
+ */
 export default function CountUp({ value, duration = 1100, suffix = '' }) {
-  const ref = useRef(null);
+  const [ref, inView] = useInView({ threshold: 0.3 });
   const [shown, setShown] = useState(0);
 
   useEffect(() => {
-    if (!ref.current) return undefined;
-    if (reduceMotion()) {
+    if (!inView) return undefined;
+    if (prefersReducedMotion() || value === 0) {
       setShown(value);
       return undefined;
     }
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) return;
-        observer.disconnect();
+    let frame;
+    const start = performance.now();
+    const tick = (now) => {
+      const progress = Math.min((now - start) / duration, 1);
+      // Ease-out cubic, so the number decelerates into its final value.
+      setShown(Math.round(value * (1 - (1 - progress) ** 3)));
+      if (progress < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
 
-        const start = performance.now();
-        const tick = (now) => {
-          const progress = Math.min((now - start) / duration, 1);
-          // Ease-out cubic, so the number decelerates into its final value.
-          setShown(Math.round(value * (1 - (1 - progress) ** 3)));
-          if (progress < 1) requestAnimationFrame(tick);
-        };
-        requestAnimationFrame(tick);
-      },
-      { threshold: 0.4 },
-    );
-
-    observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [value, duration]);
+    return () => cancelAnimationFrame(frame);
+  }, [inView, value, duration]);
 
   return (
     <span ref={ref}>

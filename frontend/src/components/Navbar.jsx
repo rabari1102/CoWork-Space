@@ -82,8 +82,8 @@ export default function Navbar() {
         <nav
           className={`mx-auto flex max-w-[1200px] items-center justify-between gap-4 rounded-2xl px-3 transition-all duration-300 sm:px-4 ${
             scrolled
-              ? 'h-14 bg-white/90 shadow-lift ring-1 ring-slate-200/80 backdrop-blur-xl'
-              : 'h-16 bg-white/70 shadow-soft ring-1 ring-slate-200/60 backdrop-blur-lg'
+              ? 'h-14 bg-white/95 shadow-lift ring-1 ring-slate-200/90 backdrop-blur-xl'
+              : 'h-16 bg-white/90 shadow-soft ring-1 ring-slate-200/70 backdrop-blur-xl'
           }`}
         >
           <Link to="/" className="shrink-0" aria-label="CoworkDesk home">
@@ -97,6 +97,7 @@ export default function Navbar() {
               </NavLink>
             ))}
           </div>
+
 
           <div className="hidden items-center gap-3 md:flex">
             {user ? (

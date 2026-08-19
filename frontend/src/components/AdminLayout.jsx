@@ -15,7 +15,7 @@ export default function AdminLayout() {
     }`;
 
   return (
-    <div className="flex w-full flex-col gap-8 md:flex-row">
+    <div className="page flex w-full flex-col gap-8 md:flex-row">
       <aside className="shrink-0 md:w-64 md:pt-2">
         {/* Horizontal on small screens, a proper sidebar from md up. */}
         <nav className="hide-scroll flex gap-1 overflow-x-auto md:flex-col md:space-y-1 md:overflow-visible">

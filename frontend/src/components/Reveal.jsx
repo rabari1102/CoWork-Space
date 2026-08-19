@@ -1,36 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
-
-const prefersReducedMotion = () =>
-  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+import { prefersReducedMotion, useInView } from '../hooks/useInView.js';
 
 /**
- * Reveals its children the first time they scroll into view.
- *
- * Uses IntersectionObserver rather than scroll listeners so it costs nothing
- * while off screen, animates only opacity and transform to stay on the
- * compositor, and renders straight to the final state for anyone who has asked
- * their OS to reduce motion.
+ * Fades and lifts its children the first time they reach the viewport.
+ * Only opacity and transform animate, so the work stays on the compositor.
  */
 export default function Reveal({ children, delay = 0, as: Tag = 'div', className = '' }) {
-  const ref = useRef(null);
-  const [shown, setShown] = useState(prefersReducedMotion);
-
-  useEffect(() => {
-    if (shown || !ref.current) return undefined;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setShown(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: '0px 0px -8% 0px', threshold: 0.05 },
-    );
-
-    observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [shown]);
+  const [ref, inView] = useInView();
+  const shown = inView || prefersReducedMotion();
 
   return (
     <Tag
