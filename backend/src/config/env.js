@@ -8,11 +8,24 @@ function required(name) {
   return value;
 }
 
+/**
+ * Allowed origins are compared byte-for-byte against the browser's Origin
+ * header, which never carries a trailing slash. Addresses get copied out of the
+ * address bar (which shows one) and out of dashboards (which add whitespace),
+ * so normalise both away rather than failing a match on an invisible character.
+ */
+function parseOrigins(value) {
+  return value
+    .split(',')
+    .map((origin) => origin.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+}
+
 export const config = {
   env: process.env.NODE_ENV || 'development',
   port: Number(process.env.PORT || 4000),
   databaseUrl: required('DATABASE_URL'),
-  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  corsOrigin: parseOrigins(process.env.CORS_ORIGIN || 'http://localhost:5173'),
   jwt: {
     accessSecret: required('JWT_ACCESS_SECRET'),
     refreshSecret: required('JWT_REFRESH_SECRET'),

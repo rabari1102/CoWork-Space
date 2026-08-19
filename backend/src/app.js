@@ -11,7 +11,11 @@ const app = express();
 // Behind a proxy (nginx in Docker, the platform edge when deployed), so trust
 // one hop for the client IP the rate limiter keys on.
 app.set('trust proxy', 1);
-app.use(cors({ origin: config.corsOrigin.split(',') }));
+app.use(cors({ origin: config.corsOrigin }));
+
+// Printed once per process so a rejected browser request can be diagnosed from
+// the logs without guessing at what the environment variable actually held.
+console.log(`CORS allowing: ${config.corsOrigin.join(', ')}`);
 app.use(express.json({ limit: '100kb' }));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
