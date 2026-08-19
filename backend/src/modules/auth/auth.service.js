@@ -126,3 +126,48 @@ export async function getProfile(userId) {
   }
   return publicUser(rows[0]);
 }
+
+export async function updateProfile(userId, { name, email, password }) {
+  const current = await query('SELECT id, email FROM users WHERE id = $1', [userId]);
+  if (current.rowCount === 0) {
+    throw ApiError.notFound('User not found');
+  }
+
+  if (email && email !== current.rows[0].email) {
+    const existing = await query('SELECT 1 FROM users WHERE email = $1 AND id != $2', [email, userId]);
+    if (existing.rowCount > 0) {
+      throw ApiError.conflict('EMAIL_TAKEN', 'An account with that email already exists');
+    }
+  }
+
+  const updates = [];
+  const values = [];
+  let idx = 1;
+
+  if (name !== undefined && name !== null) {
+    updates.push(`name = $${idx++}`);
+    values.push(name.trim());
+  }
+  if (email !== undefined && email !== null) {
+    updates.push(`email = $${idx++}`);
+    values.push(email.trim().toLowerCase());
+  }
+  if (password) {
+    const passwordHash = await bcrypt.hash(password, 10);
+    updates.push(`password_hash = $${idx++}`);
+    values.push(passwordHash);
+  }
+
+  if (updates.length === 0) {
+    return getProfile(userId);
+  }
+
+  values.push(userId);
+  const { rows } = await query(
+    `UPDATE users SET ${updates.join(', ')} WHERE id = $${idx} RETURNING id, name, email, role`,
+    values,
+  );
+
+  return publicUser(rows[0]);
+}
+

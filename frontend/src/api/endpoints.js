@@ -5,6 +5,7 @@ export const authApi = {
   login: (payload) => api.post('/auth/login', payload).then((res) => res.data),
   logout: (refreshToken) => api.post('/auth/logout', { refreshToken }),
   me: () => api.get('/auth/me').then((res) => res.data.user),
+  updateProfile: (payload) => api.patch('/auth/me', payload).then((res) => res.data.user),
 };
 
 export const spacesApi = {

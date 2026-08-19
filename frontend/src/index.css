@@ -2,68 +2,120 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Design tokens. Everything visual resolves back to these, so a colour is
+   changed in one place rather than hunted through the components. */
 @layer base {
+  :root {
+    --background: 248 250 252;
+    --foreground: 16 27 48;
+    --muted-foreground: 100 116 139;
+    --card: 255 255 255;
+    --border: 226 232 240;
+
+    --primary: 35 181 166;
+    --primary-foreground: 255 255 255;
+    --secondary: 22 36 63;
+    --accent: 6 182 212;
+    --violet: 139 92 246;
+
+    --success: 16 185 129;
+    --warning: 245 158 11;
+    --destructive: 225 29 72;
+
+    --gradient-hero: linear-gradient(135deg, #0b1220 0%, #16243f 55%, #12766d 130%);
+    --gradient-brand: linear-gradient(120deg, #23b5a6 0%, #06b6d4 100%);
+    --gradient-line: linear-gradient(90deg, transparent, #23b5a6, #06b6d4, transparent);
+  }
+
   body {
-    @apply bg-slate-50 font-sans text-slate-900 antialiased;
+    @apply bg-slate-50 font-sans text-navy-900 antialiased;
+  }
+
+  /* Anyone who has asked their OS to reduce motion gets the static version. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium
-           transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2
-           disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold
+           transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500
+           focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60
+           disabled:active:scale-100;
   }
   .btn-primary {
-    @apply btn bg-brand-600 text-white shadow-sm hover:bg-brand-700;
-  }
-  .btn-secondary {
-    @apply btn bg-white text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50;
+    @apply btn bg-brand-500 text-white shadow-[0_6px_18px_-6px_rgb(35_181_166/0.6)]
+           hover:bg-brand-600 hover:shadow-[0_10px_26px_-8px_rgb(35_181_166/0.7)];
   }
   .btn-dark {
-    @apply btn bg-slate-900 text-white shadow-sm hover:bg-slate-800;
+    @apply btn bg-navy-800 text-white hover:bg-navy-700;
+  }
+  .btn-secondary {
+    @apply btn bg-white text-navy-800 shadow-soft ring-1 ring-slate-200 hover:bg-slate-50 hover:ring-slate-300;
+  }
+  .btn-ghost {
+    @apply btn text-slate-600 hover:bg-slate-100 hover:text-navy-900;
   }
   .btn-danger {
     @apply btn bg-rose-600 text-white shadow-sm hover:bg-rose-700;
   }
-  .btn-ghost {
-    @apply btn text-slate-600 hover:bg-slate-100 hover:text-slate-900;
+  /* For use on the dark hero and footer. */
+  .btn-on-dark {
+    @apply btn bg-white/10 text-white ring-1 ring-white/20 backdrop-blur hover:bg-white/20;
   }
 
   .field {
-    @apply block w-full rounded-lg border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm
-           placeholder:text-slate-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500
-           disabled:bg-slate-50 disabled:text-slate-400;
-  }
-  .field-sm {
-    @apply field py-1.5 text-sm;
+    @apply block w-full rounded-xl border-slate-200 bg-white px-3.5 py-2.5 text-sm text-navy-900
+           shadow-sm transition placeholder:text-slate-400 focus:border-brand-400
+           focus:ring-2 focus:ring-brand-500/25 disabled:bg-slate-50 disabled:text-slate-400;
   }
   .label {
-    @apply mb-1 block text-sm font-medium text-slate-700;
+    @apply mb-1.5 block text-[13px] font-medium text-slate-600;
   }
+
   .card {
-    @apply rounded-xl bg-white shadow-sm ring-1 ring-slate-200;
+    @apply rounded-3xl bg-white shadow-card ring-1 ring-slate-200/80;
   }
+  .glass {
+    @apply bg-white/75 backdrop-blur-xl ring-1 ring-slate-200/70;
+  }
+  .glass-dark {
+    @apply bg-navy-900/60 backdrop-blur-xl ring-1 ring-white/10;
+  }
+
   .eyebrow {
-    @apply mb-2 block text-xs font-semibold uppercase tracking-wider text-brand-600;
+    @apply inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-brand-600;
   }
   .chip {
-    @apply inline-flex items-center rounded bg-slate-50 px-2 py-0.5 text-[11px] font-medium
-           text-slate-600 ring-1 ring-inset ring-slate-200;
+    @apply inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-[12px] font-medium text-slate-600;
   }
-  /* Table cells repeat across both admin tables. */
+
   .th {
-    @apply px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500;
+    @apply px-6 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500;
   }
   .td {
     @apply whitespace-nowrap px-6 py-4;
+  }
+
+  /* Text filled with the brand gradient, for hero emphasis. */
+  .text-gradient {
+    background-image: var(--gradient-brand);
+    @apply bg-clip-text text-transparent;
   }
 }
 
 @layer utilities {
   .glass-backdrop {
-    background-color: rgb(15 23 42 / 0.4);
-    backdrop-filter: blur(4px);
+    background-color: rgb(11 18 32 / 0.5);
+    backdrop-filter: blur(6px);
   }
   .hide-scroll {
     -ms-overflow-style: none;
@@ -72,18 +124,30 @@
   .hide-scroll::-webkit-scrollbar {
     display: none;
   }
+  .bg-hero {
+    background-image: var(--gradient-hero);
+  }
+  .gradient-rule {
+    background-image: var(--gradient-line);
+  }
+  /* Skeletons: a sweep across a neutral base, matching the real content's shape. */
+  .skeleton {
+    @apply animate-shimmer rounded-lg;
+    background-image: linear-gradient(90deg, #eef2f7 25%, #e2e8f0 50%, #eef2f7 75%);
+    background-size: 200% 100%;
+  }
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
-  border-radius: 4px;
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;

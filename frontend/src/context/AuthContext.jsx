@@ -28,6 +28,14 @@ export function AuthProvider({ children }) {
     return session.user;
   };
 
+  const updateUser = useCallback((updatedUser) => {
+    const current = readSession();
+    if (current) {
+      writeSession({ ...current, user: { ...current.user, ...updatedUser } });
+    }
+    setUser((prev) => (prev ? { ...prev, ...updatedUser } : updatedUser));
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
@@ -36,8 +44,9 @@ export function AuthProvider({ children }) {
       signIn: async (credentials) => applySession(await authApi.login(credentials)),
       signUp: async (payload) => applySession(await authApi.register(payload)),
       signOut,
+      updateUser,
     }),
-    [user, signOut],
+    [user, signOut, updateUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -25,3 +25,9 @@ export const me = asyncHandler(async (req, res) => {
   const user = await authService.getProfile(req.user.id);
   res.json({ user });
 });
+
+export const updateProfile = asyncHandler(async (req, res) => {
+  const user = await authService.updateProfile(req.user.id, req.body);
+  res.json({ user });
+});
+
