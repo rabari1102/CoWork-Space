@@ -6,22 +6,24 @@ import { authRouter } from './modules/auth/auth.routes.js';
 import { bookingsRouter } from './modules/bookings/bookings.routes.js';
 import { spacesRouter } from './modules/spaces/spaces.routes.js';
 
-export function createApp() {
-  const app = express();
+const app = express();
 
-  // Behind the compose nginx container, so trust one proxy hop for rate limiting.
-  app.set('trust proxy', 1);
-  app.use(cors({ origin: config.corsOrigin.split(',') }));
-  app.use(express.json({ limit: '100kb' }));
+// Behind a proxy (nginx in Docker, the platform edge when deployed), so trust
+// one hop for the client IP the rate limiter keys on.
+app.set('trust proxy', 1);
+app.use(cors({ origin: config.corsOrigin.split(',') }));
+app.use(express.json({ limit: '100kb' }));
 
-  app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
-  app.use('/api/auth', authRouter);
-  app.use('/api/spaces', spacesRouter);
-  app.use('/api/bookings', bookingsRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/spaces', spacesRouter);
+app.use('/api/bookings', bookingsRouter);
 
-  app.use(notFoundHandler);
-  app.use(errorHandler);
+app.use(notFoundHandler);
+app.use(errorHandler);
 
-  return app;
-}
+// An Express app is itself a (req, res) handler, so exporting it as the default
+// is all a serverless host needs; server.js wraps the same instance in an HTTP
+// listener for Docker and local development.
+export default app;
