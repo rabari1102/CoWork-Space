@@ -1,0 +1,372 @@
+{
+  "info": {
+    "name": "Co-working Space Booking System",
+    "description": "Run 'Login (admin)' or 'Login (member)' first - the response scripts store the tokens in collection variables that every other request reuses.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4000/api" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "spaceId", "value": "1" },
+    { "key": "bookingId", "value": "1" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"New Member\",\n  \"email\": \"new.member@cowork.test\",\n  \"password\": \"password123\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', body.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', body.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login (member)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"member@cowork.test\",\n  \"password\": \"member1234\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', body.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', body.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login (admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@cowork.test\",\n  \"password\": \"admin1234\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', body.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', body.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh tokens",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/refresh", "host": ["{{baseUrl}}"], "path": ["auth", "refresh"] },
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', body.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', body.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Current user",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/logout", "host": ["{{baseUrl}}"], "path": ["auth", "logout"] },
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Spaces",
+      "item": [
+        {
+          "name": "List spaces",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/spaces?page=1&limit=9",
+              "host": ["{{baseUrl}}"],
+              "path": ["spaces"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "9" },
+                { "key": "search", "value": "board", "disabled": true },
+                { "key": "type", "value": "meeting_room", "disabled": true },
+                { "key": "minCapacity", "value": "4", "disabled": true },
+                { "key": "date", "value": "2026-01-01", "disabled": true },
+                { "key": "startTime", "value": "09:00", "disabled": true },
+                { "key": "endTime", "value": "17:00", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get space",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/spaces/{{spaceId}}", "host": ["{{baseUrl}}"], "path": ["spaces", "{{spaceId}}"] }
+          }
+        },
+        {
+          "name": "Space availability",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/spaces/{{spaceId}}/availability?date=2026-01-01",
+              "host": ["{{baseUrl}}"],
+              "path": ["spaces", "{{spaceId}}", "availability"],
+              "query": [{ "key": "date", "value": "2026-01-01" }]
+            }
+          }
+        },
+        {
+          "name": "Create space (admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/spaces", "host": ["{{baseUrl}}"], "path": ["spaces"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Phone Booth\",\n  \"type\": \"desk\",\n  \"capacity\": 1,\n  \"amenities\": [\"Soundproofing\"],\n  \"description\": \"Single person call booth.\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('spaceId', pm.response.json().space.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update space (admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/spaces/{{spaceId}}", "host": ["{{baseUrl}}"], "path": ["spaces", "{{spaceId}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"capacity\": 2\n}" }
+          }
+        },
+        {
+          "name": "Delete space (admin)",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/spaces/{{spaceId}}", "host": ["{{baseUrl}}"], "path": ["spaces", "{{spaceId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Maintenance",
+      "item": [
+        {
+          "name": "List windows (admin)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/spaces/{{spaceId}}/maintenance",
+              "host": ["{{baseUrl}}"],
+              "path": ["spaces", "{{spaceId}}", "maintenance"]
+            }
+          }
+        },
+        {
+          "name": "Block out window (admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/spaces/{{spaceId}}/maintenance",
+              "host": ["{{baseUrl}}"],
+              "path": ["spaces", "{{spaceId}}", "maintenance"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startsAt\": \"2026-01-01T08:00\",\n  \"endsAt\": \"2026-01-01T18:00\",\n  \"reason\": \"Deep clean\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Remove window (admin)",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/spaces/{{spaceId}}/maintenance/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["spaces", "{{spaceId}}", "maintenance", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
+        {
+          "name": "Create booking (member)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceId\": {{spaceId}},\n  \"startsAt\": \"2026-01-01T10:00\",\n  \"endsAt\": \"2026-01-01T11:00\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('bookingId', pm.response.json().booking.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My bookings (member)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/bookings/me?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["bookings", "me"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "status", "value": "pending", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cancel booking (member)",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/bookings/{{bookingId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["bookings", "{{bookingId}}", "cancel"]
+            }
+          }
+        },
+        {
+          "name": "All bookings (admin)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/bookings?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["bookings"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "status", "value": "pending", "disabled": true },
+                { "key": "spaceId", "value": "1", "disabled": true },
+                { "key": "date", "value": "2026-01-01", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Approve booking (admin)",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/bookings/{{bookingId}}/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["bookings", "{{bookingId}}", "approve"]
+            }
+          }
+        },
+        {
+          "name": "Reject booking (admin)",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/bookings/{{bookingId}}/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["bookings", "{{bookingId}}", "reject"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
