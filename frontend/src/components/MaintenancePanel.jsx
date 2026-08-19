@@ -2,29 +2,41 @@ import { useEffect, useState } from 'react';
 import Alert from './Alert.jsx';
 import { readApiError } from '../api/client.js';
 import { spacesApi } from '../api/endpoints.js';
-import { formatDateTime, formatTime, todayIso } from '../utils/format.js';
+import { formatDate, formatTime, todayIso } from '../utils/format.js';
 
 /** Lists and edits the blackout windows that make a space unbookable. */
 export default function MaintenancePanel({ space }) {
   const [windows, setWindows] = useState([]);
-  const [form, setForm] = useState({ date: todayIso(), startTime: '08:00', endTime: '18:00', reason: '' });
+  const [form, setForm] = useState({
+    date: todayIso(),
+    startTime: '08:00',
+    endTime: '18:00',
+    reason: '',
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const load = () => {
-    setLoading(true);
-    return spacesApi
-      .maintenance(space.id)
-      .then(setWindows)
-      .catch((err) => setError(readApiError(err, 'Could not load maintenance windows')))
-      .finally(() => setLoading(false));
-  };
-
   useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let cancelled = false;
+    setLoading(true);
+    spacesApi
+      .maintenance(space.id)
+      .then((data) => {
+        if (!cancelled) setWindows(data);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(readApiError(err, 'Could not load maintenance windows'));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [space.id]);
+
+  const reload = () => spacesApi.maintenance(space.id).then(setWindows);
 
   const add = async (event) => {
     event.preventDefault();
@@ -38,7 +50,7 @@ export default function MaintenancePanel({ space }) {
         reason: form.reason,
       });
       setForm({ ...form, reason: '' });
-      await load();
+      await reload();
     } catch (err) {
       setError(readApiError(err, 'Could not block out that window'));
     } finally {
@@ -50,7 +62,7 @@ export default function MaintenancePanel({ space }) {
     setError('');
     try {
       await spacesApi.removeMaintenance(space.id, id);
-      await load();
+      await reload();
     } catch (err) {
       setError(readApiError(err, 'Could not remove that window'));
     }
@@ -59,27 +71,28 @@ export default function MaintenancePanel({ space }) {
   return (
     <div className="space-y-5">
       <div>
-        <h3 className="text-sm font-semibold text-slate-700">Blocked out</h3>
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-700">Blocked out</h3>
+
         {loading ? (
           <p className="mt-2 text-sm text-slate-500">Loading...</p>
         ) : windows.length === 0 ? (
           <p className="mt-2 text-sm text-slate-500">No maintenance windows for this space.</p>
         ) : (
-          <ul className="mt-2 space-y-2">
+          <ul className="mt-3 space-y-2">
             {windows.map((item) => (
               <li
                 key={item.id}
-                className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm ring-1 ring-slate-200"
               >
                 <span>
                   <span className="font-medium text-slate-700">
-                    {formatDateTime(item.startsAt)} - {formatTime(item.endsAt)}
+                    {formatDate(item.startsAt)}, {formatTime(item.startsAt)} - {formatTime(item.endsAt)}
                   </span>
                   {item.reason && <span className="ml-2 text-slate-500">{item.reason}</span>}
                 </span>
                 <button
                   type="button"
-                  className="text-xs text-rose-600 hover:underline"
+                  className="shrink-0 text-xs font-medium text-rose-600 hover:underline"
                   onClick={() => remove(item.id)}
                 >
                   Remove
@@ -90,11 +103,13 @@ export default function MaintenancePanel({ space }) {
         )}
       </div>
 
-      <form onSubmit={add} className="space-y-3 border-t border-slate-200 pt-4">
-        <h3 className="text-sm font-semibold text-slate-700">Block out a new window</h3>
+      <form onSubmit={add} className="space-y-3 border-t border-slate-200 pt-5">
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-700">
+          Block out a new window
+        </h3>
 
-        <div className="grid grid-cols-3 gap-3">
-          <div className="col-span-3 sm:col-span-1">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="col-span-2 sm:col-span-1">
             <label className="label" htmlFor="mw-date">
               Date
             </label>

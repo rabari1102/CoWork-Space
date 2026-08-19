@@ -1,26 +1,32 @@
 import { useCallback, useEffect, useState } from 'react';
 import Alert from '../components/Alert.jsx';
+import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import Pagination from '../components/Pagination.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
 import { readApiError } from '../api/client.js';
 import { bookingsApi, spacesApi } from '../api/endpoints.js';
-import { formatDateTime, formatTime } from '../utils/format.js';
+import { useToast } from '../context/ToastContext.jsx';
+import { formatDate, formatTime } from '../utils/format.js';
 
 const BLANK_FILTERS = { status: 'pending', spaceId: '', date: '' };
 
 export default function AdminBookingsPage() {
+  const { toast } = useToast();
+
   const [filters, setFilters] = useState(BLANK_FILTERS);
   const [page, setPage] = useState(1);
   const [spaces, setSpaces] = useState([]);
   const [result, setResult] = useState({ data: [], pagination: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
-  const [busyId, setBusyId] = useState(null);
+  const [decision, setDecision] = useState(null);
 
   useEffect(() => {
     // The filter dropdown needs every space, not just the first page.
-    spacesApi.list({ limit: 50 }).then((data) => setSpaces(data.data)).catch(() => setSpaces([]));
+    spacesApi
+      .list({ limit: 50 })
+      .then((data) => setSpaces(data.data))
+      .catch(() => setSpaces([]));
   }, []);
 
   const load = useCallback(() => {
@@ -41,64 +47,71 @@ export default function AdminBookingsPage() {
     load();
   }, [load]);
 
-  const decide = async (booking, action) => {
-    setBusyId(booking.id);
-    setError('');
-    setMessage('');
-
-    try {
-      if (action === 'approve') {
-        const { autoRejected } = await bookingsApi.approve(booking.id);
-        setMessage(
-          autoRejected.length > 0
-            ? `Approved. ${autoRejected.length} overlapping request(s) were rejected automatically.`
-            : 'Booking approved.',
-        );
-      } else {
-        await bookingsApi.reject(booking.id);
-        setMessage('Booking rejected.');
-      }
-      await load();
-    } catch (err) {
-      setError(readApiError(err, 'Could not update that booking'));
-    } finally {
-      setBusyId(null);
-    }
-  };
-
   const update = (field) => (event) => {
     setFilters((current) => ({ ...current, [field]: event.target.value }));
     setPage(1);
   };
 
+  const applyDecision = async () => {
+    const { booking, action } = decision;
+
+    if (action === 'approve') {
+      const { autoRejected } = await bookingsApi.approve(booking.id);
+      setDecision(null);
+      toast(
+        autoRejected.length > 0
+          ? `Approved. ${autoRejected.length} overlapping request${
+              autoRejected.length === 1 ? ' was' : 's were'
+            } rejected automatically.`
+          : 'Booking approved.',
+      );
+    } else {
+      await bookingsApi.reject(booking.id);
+      setDecision(null);
+      toast('Booking rejected.', 'info');
+    }
+    setError('');
+    await load();
+  };
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Booking requests</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Approving a request automatically rejects any other pending request that overlaps it.
-        </p>
+    <>
+      <div className="mb-6">
+        <span className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">
+          Administration
+        </span>
+        <h1 className="mb-2 text-2xl font-bold text-slate-900">Booking requests</h1>
+        <p className="text-sm text-slate-500">Review and manage workspace booking requests.</p>
       </div>
 
-      <div className="card grid gap-4 p-4 sm:grid-cols-3 sm:p-5">
-        <div>
-          <label className="label" htmlFor="filter-status">
-            Status
-          </label>
-          <select id="filter-status" className="field" value={filters.status} onChange={update('status')}>
+      <Alert tone="info">
+        Approving a request automatically rejects overlapping pending requests for the same space and
+        time.
+      </Alert>
+
+      <Alert>{error}</Alert>
+
+      <div className="mt-6 overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
+        <div className="flex flex-wrap items-center gap-3 border-b border-slate-200 bg-slate-50/50 p-4">
+          <select
+            aria-label="Filter by status"
+            className="field w-auto py-1.5"
+            value={filters.status}
+            onChange={update('status')}
+          >
             <option value="all">All statuses</option>
             <option value="pending">Pending</option>
             <option value="approved">Approved</option>
             <option value="rejected">Rejected</option>
             <option value="cancelled">Cancelled</option>
           </select>
-        </div>
 
-        <div>
-          <label className="label" htmlFor="filter-space">
-            Space
-          </label>
-          <select id="filter-space" className="field" value={filters.spaceId} onChange={update('spaceId')}>
+          <select
+            aria-label="Filter by space"
+            className="field w-auto py-1.5"
+            value={filters.spaceId}
+            onChange={update('spaceId')}
+          >
             <option value="">All spaces</option>
             {spaces.map((space) => (
               <option key={space.id} value={space.id}>
@@ -106,91 +119,113 @@ export default function AdminBookingsPage() {
               </option>
             ))}
           </select>
-        </div>
 
-        <div>
-          <label className="label" htmlFor="filter-date">
-            Date
-          </label>
           <input
-            id="filter-date"
             type="date"
-            className="field"
+            aria-label="Filter by date"
+            className="field w-auto py-1.5"
             value={filters.date}
             onChange={update('date')}
           />
         </div>
-      </div>
 
-      <Alert>{error}</Alert>
-      <Alert tone="success">{message}</Alert>
-
-      {loading ? (
-        <p className="py-12 text-center text-sm text-slate-500">Loading bookings...</p>
-      ) : result.data.length === 0 ? (
-        <div className="card p-10 text-center">
-          <p className="font-medium text-slate-700">No bookings match those filters</p>
-        </div>
-      ) : (
-        <div className="card overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-200">
+            <thead className="bg-slate-50">
               <tr>
-                <th className="px-4 py-3">Space</th>
-                <th className="px-4 py-3">Member</th>
-                <th className="px-4 py-3">When</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="th">Space</th>
+                <th className="th">Member</th>
+                <th className="th hidden sm:table-cell">When</th>
+                <th className="th">Status</th>
+                <th className="th text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {result.data.map((booking) => (
-                <tr key={booking.id}>
-                  <td className="px-4 py-3 font-medium text-slate-900">{booking.spaceName}</td>
-                  <td className="px-4 py-3 text-slate-600">
-                    <span className="block">{booking.userName}</span>
-                    <span className="text-xs text-slate-400">{booking.userEmail}</span>
+            <tbody className="divide-y divide-slate-200 bg-white text-sm">
+              {loading ? (
+                <tr>
+                  <td className="td text-slate-500" colSpan={5}>
+                    Loading bookings...
                   </td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {formatDateTime(booking.startsAt)} - {formatTime(booking.endsAt)}
+                </tr>
+              ) : result.data.length === 0 ? (
+                <tr>
+                  <td className="td text-slate-500" colSpan={5}>
+                    No bookings match those filters.
                   </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={booking.status} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2">
+                </tr>
+              ) : (
+                result.data.map((booking) => (
+                  <tr key={booking.id} className="transition-colors hover:bg-slate-50/50">
+                    <td className="td font-medium text-slate-900">{booking.spaceName}</td>
+                    <td className="td">
+                      <div className="font-medium text-slate-900">{booking.userName}</div>
+                      <div className="text-xs text-slate-500">{booking.userEmail}</div>
+                    </td>
+                    <td className="td hidden text-slate-500 sm:table-cell">
+                      <div>{formatDate(booking.startsAt)}</div>
+                      <div className="text-xs">
+                        {formatTime(booking.startsAt)} - {formatTime(booking.endsAt)}
+                      </div>
+                    </td>
+                    <td className="td">
+                      <StatusBadge status={booking.status} />
+                    </td>
+                    <td className="td text-right">
                       {booking.status === 'pending' ? (
-                        <>
+                        <div className="flex justify-end gap-2">
                           <button
                             type="button"
-                            className="btn-success px-3 py-1.5"
-                            disabled={busyId === booking.id}
-                            onClick={() => decide(booking, 'approve')}
+                            onClick={() => setDecision({ booking, action: 'approve' })}
+                            className="rounded bg-white px-2 py-1 text-xs font-medium text-emerald-600 ring-1 ring-slate-200 transition-colors hover:bg-emerald-50"
                           >
                             Approve
                           </button>
                           <button
                             type="button"
-                            className="btn-danger px-3 py-1.5"
-                            disabled={busyId === booking.id}
-                            onClick={() => decide(booking, 'reject')}
+                            onClick={() => setDecision({ booking, action: 'reject' })}
+                            className="rounded bg-white px-2 py-1 text-xs font-medium text-rose-600 ring-1 ring-slate-200 transition-colors hover:bg-rose-50"
                           >
                             Reject
                           </button>
-                        </>
+                        </div>
                       ) : (
                         <span className="text-xs text-slate-400">Decided</span>
                       )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
-      )}
+      </div>
 
-      <Pagination pagination={result.pagination} onChange={setPage} />
-    </div>
+      <Pagination pagination={result.pagination} onChange={setPage} noun="booking" />
+
+      {decision && (
+        <ConfirmDialog
+          title={decision.action === 'approve' ? 'Approve booking?' : 'Reject booking?'}
+          tone={decision.action === 'approve' ? 'brand' : 'danger'}
+          rows={[
+            { label: 'Member', value: decision.booking.userName },
+            { label: 'Space', value: decision.booking.spaceName },
+            {
+              label: 'Time',
+              value: `${formatDate(decision.booking.startsAt)}, ${formatTime(
+                decision.booking.startsAt,
+              )} - ${formatTime(decision.booking.endsAt)}`,
+            },
+          ]}
+          note={
+            decision.action === 'approve'
+              ? 'Any overlapping pending requests will be rejected automatically.'
+              : undefined
+          }
+          confirmLabel={decision.action === 'approve' ? 'Approve booking' : 'Reject booking'}
+          onConfirm={applyDecision}
+          onClose={() => setDecision(null)}
+        />
+      )}
+    </>
   );
 }

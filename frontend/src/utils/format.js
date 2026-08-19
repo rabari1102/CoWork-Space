@@ -7,8 +7,10 @@ export function formatDateTime(value) {
   return `${formatDate(date)}, ${time.slice(0, 5)}`;
 }
 
-function formatDate(value) {
-  const [year, month, day] = value.split('-');
+/** Accepts either a date-only string or a full timestamp. */
+export function formatDate(value) {
+  if (!value) return '';
+  const [year, month, day] = value.split('T')[0].split('-');
   return `${Number(day)} ${MONTHS[Number(month) - 1]} ${year}`;
 }
 
@@ -26,6 +28,31 @@ export const SPACE_TYPE_LABELS = {
   desk: 'Desk',
   meeting_room: 'Meeting room',
 };
+
+export const SPACE_TYPE_ICONS = {
+  desk: 'ph-desktop',
+  meeting_room: 'ph-door',
+};
+
+/** "2 hours", "45 minutes" - shown next to the booking form. */
+export function formatDuration(startTime, endTime) {
+  if (!startTime || !endTime) return null;
+
+  const toMinutes = (value) => {
+    const [hours, minutes] = value.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
+  const total = toMinutes(endTime) - toMinutes(startTime);
+  if (total <= 0) return null;
+
+  const hours = Math.floor(total / 60);
+  const minutes = total % 60;
+  const parts = [];
+  if (hours > 0) parts.push(`${hours} hour${hours === 1 ? '' : 's'}`);
+  if (minutes > 0) parts.push(`${minutes} min`);
+  return parts.join(' ');
+}
 
 /** Minutes since midnight, used to place blocks on the availability timeline. */
 export function minutesFromMidnight(timestamp) {

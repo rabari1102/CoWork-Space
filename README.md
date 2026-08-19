@@ -5,7 +5,7 @@ approve or reject requests, and the database itself guarantees that two people c
 never hold the same slot.
 
 - **Backend** - Node.js, Express, PostgreSQL (node-postgres), JWT with refresh tokens
-- **Frontend** - React (Vite), Axios, React Router, Tailwind CSS
+- **Frontend** - React (Vite), Axios, React Router, Tailwind CSS, Phosphor icons
 - **Infra** - Docker Compose brings up the database, API and web app together
 
 ---
@@ -251,9 +251,10 @@ backend/
 frontend/
   src/
     api/                         axios instance, refresh interceptor, endpoints
-    context/AuthContext.jsx      session state
-    components/                  navbar, calendar, modal, forms, pagination
+    context/                     session state and toast notifications
+    components/                  navbar, filters, calendar, modals, admin shell
     pages/                       listing, detail, login, register, dashboards
+    utils/format.js              wall-clock date and duration formatting
 docker-compose.yml
 ```
 

@@ -1,14 +1,20 @@
-const STYLES = {
-  error: 'border-rose-200 bg-rose-50 text-rose-700',
-  success: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-  info: 'border-slate-200 bg-slate-50 text-slate-600',
+const TONES = {
+  error: { wrap: 'bg-rose-50 text-rose-700 ring-rose-200', icon: 'ph-warning-circle' },
+  success: { wrap: 'bg-emerald-50 text-emerald-700 ring-emerald-200', icon: 'ph-check-circle' },
+  info: { wrap: 'bg-brand-50 text-brand-800 ring-brand-200', icon: 'ph-info' },
 };
 
 export default function Alert({ tone = 'error', children }) {
   if (!children) return null;
+  const styles = TONES[tone];
+
   return (
-    <p className={`rounded-lg border px-3 py-2 text-sm ${STYLES[tone]}`} role="status">
-      {children}
-    </p>
+    <div
+      role="status"
+      className={`flex items-start gap-2 rounded-lg p-3 text-xs ring-1 ${styles.wrap}`}
+    >
+      <i className={`ph ${styles.icon} mt-0.5 shrink-0 text-base`} />
+      <span className="leading-relaxed">{children}</span>
+    </div>
   );
 }

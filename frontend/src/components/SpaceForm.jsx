@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Alert from './Alert.jsx';
 import { readApiError } from '../api/client.js';
 
-const BLANK = { name: '', type: 'desk', capacity: 1, amenities: '', description: '' };
+const BLANK = { name: '', type: 'meeting_room', capacity: 1, amenities: '', description: '' };
 
 /** Shared by the create and edit modals on the admin spaces page. */
 export default function SpaceForm({ space, onSubmit, onCancel }) {
@@ -40,7 +40,6 @@ export default function SpaceForm({ space, onSubmit, onCancel }) {
       });
     } catch (err) {
       setError(readApiError(err, 'Could not save the space'));
-    } finally {
       setSubmitting(false);
     }
   };
@@ -54,19 +53,19 @@ export default function SpaceForm({ space, onSubmit, onCancel }) {
         <input id="space-name" className="field" required value={form.name} onChange={update('name')} />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="label" htmlFor="space-type">
             Type
           </label>
           <select id="space-type" className="field" value={form.type} onChange={update('type')}>
-            <option value="desk">Desk</option>
             <option value="meeting_room">Meeting room</option>
+            <option value="desk">Desk</option>
           </select>
         </div>
         <div>
           <label className="label" htmlFor="space-capacity">
-            Capacity
+            Capacity (seats)
           </label>
           <input
             id="space-capacity"
@@ -87,11 +86,11 @@ export default function SpaceForm({ space, onSubmit, onCancel }) {
         <input
           id="space-amenities"
           className="field"
-          placeholder="Monitor, Whiteboard, Projector"
+          placeholder="e.g. Projector, Whiteboard, Coffee"
           value={form.amenities}
           onChange={update('amenities')}
         />
-        <p className="mt-1 text-xs text-slate-500">Separate each amenity with a comma.</p>
+        <p className="mt-1 text-xs text-slate-500">Separate amenities with commas.</p>
       </div>
 
       <div>
@@ -109,12 +108,12 @@ export default function SpaceForm({ space, onSubmit, onCancel }) {
 
       <Alert>{error}</Alert>
 
-      <div className="flex gap-2">
-        <button type="submit" className="btn-primary flex-1" disabled={submitting}>
-          {submitting ? 'Saving...' : 'Save space'}
-        </button>
-        <button type="button" className="btn-secondary" onClick={onCancel}>
+      <div className="flex justify-end gap-3 pt-2">
+        <button type="button" className="btn-secondary" onClick={onCancel} disabled={submitting}>
           Cancel
+        </button>
+        <button type="submit" className="btn-primary" disabled={submitting}>
+          {submitting ? 'Saving...' : 'Save space'}
         </button>
       </div>
     </form>

@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import AdminLayout from './components/AdminLayout.jsx';
 import Navbar from './components/Navbar.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import AdminBookingsPage from './pages/AdminBookingsPage.jsx';
@@ -11,9 +12,9 @@ import SpacesPage from './pages/SpacesPage.jsx';
 
 export default function App() {
   return (
-    <div className="min-h-screen">
+    <div className="flex min-h-screen flex-col">
       <Navbar />
-      <main className="mx-auto max-w-6xl px-4 py-8">
+      <main className="mx-auto w-full max-w-[1280px] flex-1 px-4 py-6 sm:px-6 md:py-8 lg:px-8">
         <Routes>
           <Route path="/" element={<SpacesPage />} />
           <Route path="/spaces/:id" element={<SpaceDetailPage />} />
@@ -30,21 +31,17 @@ export default function App() {
           />
 
           <Route
-            path="/admin/spaces"
+            path="/admin"
             element={
               <ProtectedRoute role="admin">
-                <AdminSpacesPage />
+                <AdminLayout />
               </ProtectedRoute>
             }
-          />
-          <Route
-            path="/admin/bookings"
-            element={
-              <ProtectedRoute role="admin">
-                <AdminBookingsPage />
-              </ProtectedRoute>
-            }
-          />
+          >
+            <Route index element={<Navigate to="/admin/spaces" replace />} />
+            <Route path="spaces" element={<AdminSpacesPage />} />
+            <Route path="bookings" element={<AdminBookingsPage />} />
+          </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

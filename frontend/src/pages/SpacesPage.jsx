@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import Alert from '../components/Alert.jsx';
 import Pagination from '../components/Pagination.jsx';
 import SpaceCard from '../components/SpaceCard.jsx';
+import SpaceFilters from '../components/SpaceFilters.jsx';
 import { readApiError } from '../api/client.js';
 import { spacesApi } from '../api/endpoints.js';
 
@@ -15,9 +16,11 @@ const EMPTY_FILTERS = {
   endTime: '',
 };
 
+const PAGE_SIZE = 9;
+
 /** Only send filters the user actually filled in. */
 function toParams(filters, page) {
-  const params = { page, limit: 9 };
+  const params = { page, limit: PAGE_SIZE };
   for (const [key, value] of Object.entries(filters)) {
     if (value !== '') params[key] = value;
   }
@@ -29,7 +32,6 @@ export default function SpacesPage() {
   const page = Number(searchParams.get('page') || 1);
 
   const [filters, setFilters] = useState(EMPTY_FILTERS);
-  const [applied, setApplied] = useState(EMPTY_FILTERS);
   const [result, setResult] = useState({ data: [], pagination: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -40,7 +42,7 @@ export default function SpacesPage() {
     setError('');
 
     spacesApi
-      .list(toParams(applied, page))
+      .list(toParams(filters, page))
       .then((data) => {
         if (!cancelled) setResult(data);
       })
@@ -54,151 +56,59 @@ export default function SpacesPage() {
     return () => {
       cancelled = true;
     };
-  }, [applied, page]);
+  }, [filters, page]);
 
-  const updateField = (field) => (event) =>
-    setFilters((current) => ({ ...current, [field]: event.target.value }));
+  const goToPage = (next) => setSearchParams(next > 1 ? { page: String(next) } : {});
 
-  const goToPage = (next) => {
-    setSearchParams(next > 1 ? { page: String(next) } : {});
-  };
-
-  const submit = (event) => {
-    event.preventDefault();
-    // Times only make sense together with a date, so drop them if there is none.
-    const next = filters.date ? filters : { ...filters, startTime: '', endTime: '' };
+  const apply = (next) => {
     setFilters(next);
-    setApplied(next);
-    goToPage(1);
-  };
-
-  const reset = () => {
-    setFilters(EMPTY_FILTERS);
-    setApplied(EMPTY_FILTERS);
     goToPage(1);
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Find a space</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Browse every desk and meeting room, then check what is free on the day you need.
-        </p>
+    <>
+      <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+        <div>
+          <span className="eyebrow">Workspaces</span>
+          <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">Find your next workspace</h1>
+          <p className="mt-1 text-slate-500">
+            Discover desks and meeting rooms that fit the way you work.
+          </p>
+        </div>
+        {result.pagination && (
+          <p className="hidden text-sm text-slate-500 md:block">{result.pagination.total} results</p>
+        )}
       </div>
 
-      <form onSubmit={submit} className="card space-y-4 p-4 sm:p-5">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <label className="label" htmlFor="search">
-              Search by name or type
-            </label>
-            <input
-              id="search"
-              className="field"
-              placeholder="Boardroom, desk, studio..."
-              value={filters.search}
-              onChange={updateField('search')}
-            />
-          </div>
-
-          <div>
-            <label className="label" htmlFor="type">
-              Space type
-            </label>
-            <select id="type" className="field" value={filters.type} onChange={updateField('type')}>
-              <option value="">Any type</option>
-              <option value="desk">Desk</option>
-              <option value="meeting_room">Meeting room</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="label" htmlFor="minCapacity">
-              Minimum capacity
-            </label>
-            <input
-              id="minCapacity"
-              type="number"
-              min="1"
-              className="field"
-              placeholder="Any"
-              value={filters.minCapacity}
-              onChange={updateField('minCapacity')}
-            />
-          </div>
-
-          <div>
-            <label className="label" htmlFor="date">
-              Available on
-            </label>
-            <input
-              id="date"
-              type="date"
-              className="field"
-              value={filters.date}
-              onChange={updateField('date')}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label" htmlFor="startTime">
-                From
-              </label>
-              <input
-                id="startTime"
-                type="time"
-                className="field"
-                disabled={!filters.date}
-                value={filters.startTime}
-                onChange={updateField('startTime')}
-              />
-            </div>
-            <div>
-              <label className="label" htmlFor="endTime">
-                To
-              </label>
-              <input
-                id="endTime"
-                type="time"
-                className="field"
-                disabled={!filters.date}
-                value={filters.endTime}
-                onChange={updateField('endTime')}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <button type="submit" className="btn-primary">
-            Apply filters
-          </button>
-          <button type="button" className="btn-secondary" onClick={reset}>
-            Clear
-          </button>
-        </div>
-      </form>
+      <SpaceFilters value={filters} onApply={apply} onReset={() => apply(EMPTY_FILTERS)} />
 
       <Alert>{error}</Alert>
 
       {loading ? (
-        <p className="py-12 text-center text-sm text-slate-500">Loading spaces...</p>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="h-64 animate-pulse rounded-xl bg-white ring-1 ring-slate-200" />
+          ))}
+        </div>
       ) : result.data.length === 0 ? (
-        <div className="card p-10 text-center">
-          <p className="font-medium text-slate-700">No spaces match those filters</p>
-          <p className="mt-1 text-sm text-slate-500">Try widening the time range or clearing the search.</p>
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white py-16 text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-50">
+            <i className="ph ph-magnifying-glass text-2xl text-slate-400" />
+          </div>
+          <h3 className="text-sm font-semibold text-slate-900">No spaces match those filters</h3>
+          <p className="mt-1 text-sm text-slate-500">
+            Try widening the time range or clearing the search.
+          </p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {result.data.map((space) => (
             <SpaceCard key={space.id} space={space} />
           ))}
         </div>
       )}
 
-      <Pagination pagination={result.pagination} onChange={goToPage} />
-    </div>
+      <Pagination pagination={result.pagination} onChange={goToPage} noun="space" />
+    </>
   );
 }
