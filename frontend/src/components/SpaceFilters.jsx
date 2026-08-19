@@ -1,4 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
+import Select from './Select.jsx';
+
+const TYPE_OPTIONS = [
+  { value: '', label: 'All spaces' },
+  { value: 'desk', label: 'Desk' },
+  { value: 'meeting_room', label: 'Meeting room' },
+];
 
 /**
  * Search, type, capacity and date/time availability filters.
@@ -28,6 +35,7 @@ export default function SpaceFilters({ value, onApply, onReset }) {
   }, [popoverOpen]);
 
   const update = (field) => (event) => setDraft((current) => ({ ...current, [field]: event.target.value }));
+  const setField = (field) => (value) => setDraft((current) => ({ ...current, [field]: value }));
 
   const submit = (event) => {
     event.preventDefault();
@@ -119,16 +127,13 @@ export default function SpaceFilters({ value, onApply, onReset }) {
           />
         </div>
 
-        <select
-          aria-label="Space type"
-          className="cursor-pointer border-none bg-transparent py-2 pl-3 pr-8 text-sm text-slate-600 focus:ring-0"
+        <Select
+          ariaLabel="Space type"
+          variant="bare"
+          options={TYPE_OPTIONS}
           value={draft.type}
-          onChange={update('type')}
-        >
-          <option value="">All spaces</option>
-          <option value="desk">Desk</option>
-          <option value="meeting_room">Meeting room</option>
-        </select>
+          onChange={setField('type')}
+        />
 
         <div className="h-6 w-px bg-slate-200" />
 
@@ -209,11 +214,13 @@ export default function SpaceFilters({ value, onApply, onReset }) {
               <label className="label" htmlFor="filter-type-mobile">
                 Space type
               </label>
-              <select id="filter-type-mobile" className="field" value={draft.type} onChange={update('type')}>
-                <option value="">All spaces</option>
-                <option value="desk">Desk</option>
-                <option value="meeting_room">Meeting room</option>
-              </select>
+              <Select
+                id="filter-type-mobile"
+                ariaLabel="Space type"
+                options={TYPE_OPTIONS}
+                value={draft.type}
+                onChange={setField('type')}
+              />
             </div>
 
             {dateAndCapacityFields}

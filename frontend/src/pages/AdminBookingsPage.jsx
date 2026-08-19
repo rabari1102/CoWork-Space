@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Alert from '../components/Alert.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import Pagination from '../components/Pagination.jsx';
+import Select from '../components/Select.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
 import { readApiError } from '../api/client.js';
 import { bookingsApi, spacesApi } from '../api/endpoints.js';
@@ -9,6 +10,14 @@ import { useToast } from '../context/ToastContext.jsx';
 import { formatDate, formatTime } from '../utils/format.js';
 
 const BLANK_FILTERS = { status: 'pending', spaceId: '', date: '' };
+
+const STATUS_OPTIONS = [
+  { value: 'all', label: 'All statuses' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rejected', label: 'Rejected' },
+  { value: 'cancelled', label: 'Cancelled' },
+];
 
 export default function AdminBookingsPage() {
   const { toast } = useToast();
@@ -49,6 +58,11 @@ export default function AdminBookingsPage() {
 
   const update = (field) => (event) => {
     setFilters((current) => ({ ...current, [field]: event.target.value }));
+    setPage(1);
+  };
+
+  const setFilter = (field) => (value) => {
+    setFilters((current) => ({ ...current, [field]: value }));
     setPage(1);
   };
 
@@ -93,32 +107,24 @@ export default function AdminBookingsPage() {
 
       <div className="mt-6 overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
         <div className="flex flex-wrap items-center gap-3 border-b border-slate-200 bg-slate-50/50 p-4">
-          <select
-            aria-label="Filter by status"
-            className="field w-auto py-1.5"
+          <Select
+            ariaLabel="Filter by status"
+            className="w-44"
+            options={STATUS_OPTIONS}
             value={filters.status}
-            onChange={update('status')}
-          >
-            <option value="all">All statuses</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
+            onChange={setFilter('status')}
+          />
 
-          <select
-            aria-label="Filter by space"
-            className="field w-auto py-1.5"
-            value={filters.spaceId}
-            onChange={update('spaceId')}
-          >
-            <option value="">All spaces</option>
-            {spaces.map((space) => (
-              <option key={space.id} value={space.id}>
-                {space.name}
-              </option>
-            ))}
-          </select>
+          <Select
+            ariaLabel="Filter by space"
+            className="w-52"
+            options={[
+              { value: '', label: 'All spaces' },
+              ...spaces.map((space) => ({ value: String(space.id), label: space.name })),
+            ]}
+            value={String(filters.spaceId)}
+            onChange={setFilter('spaceId')}
+          />
 
           <input
             type="date"

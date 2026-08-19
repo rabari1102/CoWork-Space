@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Alert from './Alert.jsx';
+import Select from './Select.jsx';
 import { readApiError } from '../api/client.js';
 
 const BLANK = { name: '', type: 'meeting_room', capacity: 1, amenities: '', description: '' };
@@ -58,10 +59,16 @@ export default function SpaceForm({ space, onSubmit, onCancel }) {
           <label className="label" htmlFor="space-type">
             Type
           </label>
-          <select id="space-type" className="field" value={form.type} onChange={update('type')}>
-            <option value="meeting_room">Meeting room</option>
-            <option value="desk">Desk</option>
-          </select>
+          <Select
+            id="space-type"
+            ariaLabel="Type"
+            options={[
+              { value: 'meeting_room', label: 'Meeting room' },
+              { value: 'desk', label: 'Desk' },
+            ]}
+            value={form.type}
+            onChange={(value) => setForm({ ...form, type: value })}
+          />
         </div>
         <div>
           <label className="label" htmlFor="space-capacity">
