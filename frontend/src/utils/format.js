@@ -59,3 +59,20 @@ export function minutesFromMidnight(timestamp) {
   const [hours, minutes] = timestamp.split('T')[1].split(':').map(Number);
   return hours * 60 + minutes;
 }
+
+export function resolveImageUrl(url) {
+  if (!url) return '';
+  if (
+    url.startsWith('http://') ||
+    url.startsWith('https://') ||
+    url.startsWith('data:') ||
+    url.startsWith('blob:')
+  ) {
+    return url;
+  }
+  if (url.startsWith('/uploads/')) {
+    const apiOrigin = import.meta.env.VITE_API_ORIGIN || 'http://localhost:4000';
+    return `${apiOrigin}${url}`;
+  }
+  return url;
+}

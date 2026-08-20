@@ -8,60 +8,68 @@ import { formatDate } from '../utils/format.js';
  * window, so the badge states a fact rather than a guess.
  */
 export default function SpaceCard({ space, availableOn }) {
-  const visible = space.amenities.slice(0, 3);
+  const visible = space.amenities.slice(0, 2);
   const hidden = space.amenities.length - visible.length;
 
   return (
     <Link
       to={`/spaces/${space.id}`}
-      className="group flex h-full flex-col overflow-hidden rounded-3xl bg-white shadow-card ring-1 ring-slate-200/80 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lift hover:ring-brand-300/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+      className="group flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-card ring-1 ring-slate-200/80 transition-all duration-300 hover:-translate-y-1 hover:shadow-lift hover:ring-brand-300/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
     >
-      <div className="relative aspect-[16/10] overflow-hidden">
+      <div className="relative aspect-[16/10] overflow-hidden bg-slate-900">
         <SpaceArtwork
           space={space}
           className="h-full w-full transition-transform duration-700 ease-out group-hover:scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-navy-950/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+        <div className="absolute inset-0 bg-gradient-to-t from-navy-950/40 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
         {availableOn && (
-          <span className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-lg bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 shadow-sm backdrop-blur">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          <span className="absolute right-2.5 top-2.5 inline-flex items-center gap-1.5 rounded-lg bg-white/95 px-2 py-0.5 text-[10px] font-bold text-emerald-700 shadow-sm backdrop-blur">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
             Free {availableOn}
           </span>
         )}
       </div>
 
-      <div className="flex flex-1 flex-col p-5">
-        <h3 className="text-[19px] font-bold leading-snug tracking-[-0.01em] text-navy-900 transition-colors group-hover:text-brand-600">
-          {space.name}
-        </h3>
+      <div className="flex flex-1 flex-col justify-between p-4">
+        <div>
+          <h3 className="text-[16px] font-bold leading-snug tracking-[-0.01em] text-navy-900 transition-colors group-hover:text-brand-600 line-clamp-1">
+            {space.name}
+          </h3>
 
-        <p className="mt-1.5 flex items-center gap-1.5 text-sm text-slate-500">
-          <i className="ph ph-users text-base" />
-          Seats {space.capacity}
-        </p>
-
-        {space.description && (
-          <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-slate-600">
-            {space.description}
+          <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+            <i className="ph ph-users text-sm text-slate-400" />
+            <span>Seats {space.capacity}</span>
           </p>
-        )}
 
-        {visible.length > 0 && (
-          <ul className="mt-4 flex flex-wrap gap-1.5">
-            {visible.map((amenity) => (
-              <li key={amenity} className="chip">
-                {amenity}
-              </li>
-            ))}
-            {hidden > 0 && <li className="chip text-slate-400">+{hidden}</li>}
-          </ul>
-        )}
+          {space.description && (
+            <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-slate-600">
+              {space.description}
+            </p>
+          )}
+        </div>
 
-        <span className="mt-5 inline-flex items-center gap-1.5 border-t border-slate-100 pt-4 text-sm font-semibold text-brand-600">
-          Check availability
-          <i className="ph ph-arrow-right transition-transform duration-300 group-hover:translate-x-1" />
-        </span>
+        <div className="mt-3">
+          {visible.length > 0 && (
+            <ul className="flex flex-wrap gap-1">
+              {visible.map((amenity) => (
+                <li key={amenity} className="rounded-md bg-slate-100 px-2 py-0.5 text-[10.5px] font-medium text-slate-600">
+                  {amenity}
+                </li>
+              ))}
+              {hidden > 0 && (
+                <li className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10.5px] font-medium text-slate-400">
+                  +{hidden}
+                </li>
+              )}
+            </ul>
+          )}
+
+          <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5 text-xs font-bold text-brand-600">
+            <span>Check availability</span>
+            <i className="ph ph-arrow-right text-sm transition-transform duration-300 group-hover:translate-x-1" />
+          </div>
+        </div>
       </div>
     </Link>
   );
@@ -69,17 +77,17 @@ export default function SpaceCard({ space, availableOn }) {
 
 export function SpaceCardSkeleton() {
   return (
-    <div className="overflow-hidden rounded-3xl bg-white ring-1 ring-slate-200/80">
+    <div className="overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200/80">
       <div className="skeleton aspect-[16/10] rounded-none" />
-      <div className="space-y-3 p-5">
-        <div className="skeleton h-5 w-2/3" />
-        <div className="skeleton h-4 w-24" />
-        <div className="skeleton h-4 w-full" />
-        <div className="flex gap-1.5 pt-1">
-          <div className="skeleton h-6 w-20" />
-          <div className="skeleton h-6 w-16" />
+      <div className="space-y-2.5 p-4">
+        <div className="skeleton h-4 w-3/4" />
+        <div className="skeleton h-3.5 w-20" />
+        <div className="skeleton h-7 w-full" />
+        <div className="flex gap-1 pt-1">
+          <div className="skeleton h-5 w-16" />
+          <div className="skeleton h-5 w-14" />
         </div>
-        <div className="skeleton mt-4 h-4 w-32" />
+        <div className="skeleton mt-2 h-3.5 w-28" />
       </div>
     </div>
   );

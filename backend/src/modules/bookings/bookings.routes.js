@@ -16,6 +16,7 @@ bookingsRouter.use(authenticate);
 // Member
 bookingsRouter.post('/', authorize('member'), validate(createBookingSchema), controller.create);
 bookingsRouter.get('/me', authorize('member'), validate(listMyBookingsSchema), controller.listMine);
+bookingsRouter.get('/me/stats', authorize('member'), controller.myStats);
 bookingsRouter.patch('/:id/cancel', authorize('member'), validate(idParamSchema), controller.cancel);
 
 // Admin

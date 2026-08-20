@@ -27,3 +27,7 @@ export const remove = asyncHandler(async (req, res) => {
   await spacesService.deleteSpace(req.params.id);
   res.status(204).send();
 });
+
+export const summary = asyncHandler(async (req, res) => {
+  res.json(await spacesService.getSpacesSummary());
+});

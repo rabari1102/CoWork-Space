@@ -181,20 +181,18 @@ export default function SpaceDetailPage() {
           )}
 
           <Reveal>
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-xl font-bold text-navy-900">Availability</h2>
-              <input
-                type="date"
-                className="field w-auto py-2"
-                value={date}
-                onChange={(event) => setDate(event.target.value)}
-                aria-label="Availability date"
-              />
-            </div>
             <AvailabilityCalendar
               bookings={availability.bookings}
               maintenance={availability.maintenance}
               loading={loadingSlots}
+              selectedDate={date}
+              onDateChange={setDate}
+              selectedStartTime={form.startTime}
+              selectedEndTime={form.endTime}
+              onSelectSlot={({ startTime, endTime }) => {
+                setForm((curr) => ({ ...curr, startTime, endTime }));
+                setBookingError('');
+              }}
             />
           </Reveal>
         </div>

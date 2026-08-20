@@ -3,12 +3,27 @@ import { createContext, useCallback, useContext, useMemo, useState } from 'react
 const ToastContext = createContext(null);
 
 const TONES = {
-  success: { icon: 'ph-check-circle', color: 'text-emerald-500' },
-  error: { icon: 'ph-warning-circle', color: 'text-rose-500' },
-  info: { icon: 'ph-info', color: 'text-brand-500' },
+  success: {
+    icon: 'ph-check-circle',
+    iconColor: 'text-emerald-500',
+    bgBadge: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+    title: 'Success',
+  },
+  error: {
+    icon: 'ph-warning-circle',
+    iconColor: 'text-rose-500',
+    bgBadge: 'bg-rose-50 text-rose-700 ring-rose-200',
+    title: 'Error',
+  },
+  info: {
+    icon: 'ph-info',
+    iconColor: 'text-teal-500',
+    bgBadge: 'bg-teal-50 text-teal-700 ring-teal-200',
+    title: 'Notice',
+  },
 };
 
-const DISMISS_AFTER_MS = 4000;
+const DISMISS_AFTER_MS = 4500;
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
@@ -31,24 +46,38 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="pointer-events-none fixed right-0 top-4 z-[70] flex w-full max-w-sm flex-col gap-2 px-4 md:right-4 md:w-[350px] md:px-0">
-        {toasts.map((toast) => {
-          const tone = TONES[toast.tone] || TONES.info;
+      <div
+        className="pointer-events-none fixed right-0 top-5 z-[80] flex w-full max-w-sm flex-col gap-2.5 px-4 sm:right-5 sm:px-0"
+        aria-live="polite"
+      >
+        {toasts.map((t) => {
+          const tone = TONES[t.tone] || TONES.info;
           return (
             <div
-              key={toast.id}
-              role="status"
-              className="pointer-events-auto flex animate-fade-in items-start gap-3 rounded-lg bg-white p-4 shadow-lg ring-1 ring-slate-200"
+              key={t.id}
+              role="alert"
+              className="pointer-events-auto flex w-full animate-scale-in items-start gap-3 rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-xl shadow-slate-900/10 backdrop-blur-xl ring-1 ring-black/5"
             >
-              <i className={`ph ${tone.icon} ${tone.color} mt-0.5 shrink-0 text-xl`} />
-              <p className="flex-1 pt-0.5 text-sm font-medium text-slate-900">{toast.message}</p>
+              <div className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl ring-1 ${tone.bgBadge}`}>
+                <i className={`ph ${tone.icon} text-lg font-bold`} />
+              </div>
+
+              <div className="flex-1 min-w-0 pt-0.5">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  {tone.title}
+                </p>
+                <p className="text-xs sm:text-sm font-semibold text-navy-900 leading-snug mt-0.5">
+                  {t.message}
+                </p>
+              </div>
+
               <button
                 type="button"
-                onClick={() => dismiss(toast.id)}
-                className="ml-2 shrink-0 text-slate-400 hover:text-slate-600"
-                aria-label="Dismiss"
+                onClick={() => dismiss(t.id)}
+                className="grid h-6 w-6 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-navy-900 transition-colors"
+                aria-label="Dismiss notification"
               >
-                <i className="ph ph-x" />
+                <i className="ph ph-x text-xs font-bold" />
               </button>
             </div>
           );
@@ -65,3 +94,4 @@ export function useToast() {
   }
   return context;
 }
+

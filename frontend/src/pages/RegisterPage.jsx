@@ -31,22 +31,81 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="page flex items-center justify-center py-14">
-      <div className="relative w-full max-w-[460px]">
-        <div
-          className="absolute -inset-6 -z-10 rounded-[2.5rem] bg-gradient-to-br from-brand-200/40 via-cyan-200/30 to-violet-200/30 blur-2xl"
-          aria-hidden="true"
-        />
+    <div className="page flex min-h-[calc(100vh-200px)] items-center justify-center py-8 sm:py-12">
+      <div className="grid w-full max-w-4xl overflow-hidden rounded-[2rem] bg-white shadow-lift ring-1 ring-slate-200/80 md:grid-cols-2">
+        {/* Brand panel */}
+        <div className="relative hidden flex-col justify-between overflow-hidden bg-hero p-8 md:flex">
+          <div className="absolute inset-0 bg-grid-navy bg-grid opacity-30" aria-hidden="true" />
+          <div
+            className="absolute -left-16 bottom-10 h-56 w-56 rounded-full bg-brand-500/25 blur-3xl"
+            aria-hidden="true"
+          />
+          <div
+            className="absolute -right-10 top-0 h-48 w-48 rounded-full bg-cyan-500/20 blur-3xl"
+            aria-hidden="true"
+          />
 
-        <div className="rounded-[2rem] bg-white p-8 shadow-lift ring-1 ring-slate-200/80 sm:p-10">
-          <div className="mb-8 text-center">
-            <div className="flex justify-center">
-              <Logo showWordmark={false} />
+          {/* Top Logo */}
+          <div className="relative">
+            <Logo tone="light" />
+          </div>
+
+          {/* Middle Content & Visual Showcase */}
+          <div className="relative my-auto py-4">
+            <h2 className="text-2xl font-extrabold leading-tight tracking-tight text-white sm:text-3xl">
+              Your workspace,
+              <br />
+              <span className="text-gradient">when you need it.</span>
+            </h2>
+            <p className="mt-2 text-xs sm:text-sm leading-relaxed text-slate-300">
+              Check real-time availability, reserve by the hour, and get on with your work.
+            </p>
+
+            {/* Glassmorphic Feature Pill */}
+            <div className="mt-5 rounded-2xl border border-white/15 bg-white/[0.08] p-3.5 backdrop-blur-md shadow-lg">
+              <div className="flex items-center gap-3">
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-teal-400 to-cyan-500 text-white shadow-md">
+                  <i className="ph ph-buildings text-xl" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-white">50 Verified Workspaces</p>
+                  <p className="text-[11px] text-slate-300">Desks &amp; Meeting Rooms Ready</p>
+                </div>
+              </div>
             </div>
-            <h1 className="mt-4 text-2xl font-extrabold tracking-tight text-navy-900">
+
+            <ul className="mt-5 space-y-2.5">
+              {[
+                'Real-time live availability calendar',
+                'Zero double bookings guaranteed',
+                'High-speed fiber WiFi & AV included',
+              ].map((point) => (
+                <li key={point} className="flex items-center gap-2.5 text-xs text-slate-300">
+                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-md bg-teal-400/20 text-teal-300">
+                    <i className="ph ph-check text-xs font-bold" />
+                  </span>
+                  <span>{point}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Bottom Live Status */}
+          <div className="relative border-t border-white/10 pt-4">
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Instant confirmation upon booking</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Form */}
+        <div className="flex flex-col justify-center p-6 sm:p-10">
+          <div className="mb-6">
+            <h1 className="text-2xl font-extrabold tracking-tight text-navy-900">
               Create your account
             </h1>
-            <p className="mt-1.5 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-slate-500">
               Join CoworkDesk and start booking in minutes.
             </p>
           </div>
@@ -62,6 +121,7 @@ export default function RegisterPage() {
                 required
                 minLength={2}
                 autoComplete="name"
+                placeholder="Sarah Connor"
                 value={form.name}
                 onChange={(event) => setForm({ ...form, name: event.target.value })}
               />
@@ -77,6 +137,7 @@ export default function RegisterPage() {
                 className="field"
                 required
                 autoComplete="email"
+                placeholder="sarah@example.com"
                 value={form.email}
                 onChange={(event) => setForm({ ...form, email: event.target.value })}
               />
@@ -93,10 +154,10 @@ export default function RegisterPage() {
                 required
                 minLength={8}
                 autoComplete="new-password"
+                placeholder="At least 8 characters"
                 value={form.password}
                 onChange={(event) => setForm({ ...form, password: event.target.value })}
               />
-              <p className="mt-1.5 text-xs text-slate-500">At least 8 characters.</p>
             </div>
 
             <Alert>{error}</Alert>
@@ -112,7 +173,7 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          <p className="mt-8 text-center text-sm text-slate-500">
+          <p className="mt-6 text-center text-sm text-slate-500">
             Already have an account?{' '}
             <Link to="/login" className="font-semibold text-brand-600 hover:text-brand-700">
               Sign in

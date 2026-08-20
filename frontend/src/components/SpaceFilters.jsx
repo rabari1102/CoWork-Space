@@ -25,6 +25,22 @@ export default function SpaceFilters({ value, onApply, onReset }) {
 
   useEffect(() => setDraft(value), [value]);
 
+  // Debounced live search
+  useEffect(() => {
+    if (draft.search === value.search) return;
+
+    if (!draft.search?.trim()) {
+      onApply({ ...draft, search: '' });
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      onApply({ ...draft, search: draft.search.trim() });
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [draft.search, value.search, draft, onApply]);
+
   useEffect(() => {
     if (!popoverOpen) return undefined;
     const onPointerDown = (event) => {
@@ -36,12 +52,18 @@ export default function SpaceFilters({ value, onApply, onReset }) {
     return () => document.removeEventListener('mousedown', onPointerDown);
   }, [popoverOpen]);
 
-  const update = (field) => (event) => setDraft((current) => ({ ...current, [field]: event.target.value }));
-  const setField = (field) => (value) => setDraft((current) => ({ ...current, [field]: value }));
+  const update = (field) => (event) => {
+    const nextVal = event.target.value;
+    setDraft((current) => ({ ...current, [field]: nextVal }));
+  };
+
+  const handleTypeChange = (nextType) => {
+    setDraft((current) => ({ ...current, type: nextType }));
+    onApply({ ...draft, type: nextType });
+  };
 
   const submit = (event) => {
-    event.preventDefault();
-    // A time range is only meaningful alongside a date.
+    event?.preventDefault();
     onApply(draft.date ? draft : { ...draft, startTime: '', endTime: '' });
     setPopoverOpen(false);
     setMobileOpen(false);
@@ -70,7 +92,6 @@ export default function SpaceFilters({ value, onApply, onReset }) {
           onChange={(val) => setDraft((curr) => ({ ...curr, date: val }))}
         />
       </div>
-
 
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -125,16 +146,29 @@ export default function SpaceFilters({ value, onApply, onReset }) {
         onSubmit={submit}
         className="relative z-10 mb-8 hidden items-center gap-3 rounded-2xl bg-white p-2 shadow-sm ring-1 ring-slate-200 md:flex"
       >
-        <div className="flex flex-1 items-center gap-2 px-3 py-1">
+        <div className="relative flex flex-1 items-center gap-2 px-3 py-1">
           <i className="ph ph-magnifying-glass text-lg text-slate-400 shrink-0" />
           <input
             type="text"
             placeholder="Search spaces..."
             aria-label="Search spaces"
-            className="w-full border-none bg-transparent p-0 text-sm font-medium text-navy-900 placeholder:text-slate-400 focus:outline-none focus:ring-0"
+            className="w-full border-none bg-transparent p-0 pr-6 text-sm font-medium text-navy-900 placeholder:text-slate-400 focus:outline-none focus:ring-0"
             value={draft.search}
             onChange={update('search')}
           />
+          {draft.search && (
+            <button
+              type="button"
+              onClick={() => {
+                setDraft((curr) => ({ ...curr, search: '' }));
+                onApply({ ...draft, search: '' });
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 grid h-5 w-5 place-items-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors"
+              aria-label="Clear search"
+            >
+              <i className="ph ph-x text-[10px] font-bold" />
+            </button>
+          )}
         </div>
 
         <div className="h-6 w-px bg-slate-200 shrink-0" />
@@ -145,7 +179,7 @@ export default function SpaceFilters({ value, onApply, onReset }) {
             variant="bare"
             options={TYPE_OPTIONS}
             value={draft.type}
-            onChange={setField('type')}
+            onChange={handleTypeChange}
           />
         </div>
 
@@ -218,7 +252,7 @@ export default function SpaceFilters({ value, onApply, onReset }) {
               <input
                 id="filter-search-mobile"
                 className="field"
-                placeholder="Boardroom, desk, studio..."
+                placeholder="Desk, meeting room..."
                 value={draft.search}
                 onChange={update('search')}
               />

@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import CountUp from './CountUp.jsx';
 import DatePicker from './DatePicker.jsx';
 import Select from './Select.jsx';
-import { todayIso } from '../utils/format.js';
+import { resolveImageUrl, SPACE_TYPE_ICONS, SPACE_TYPE_LABELS, todayIso } from '../utils/format.js';
 
 const TYPE_OPTIONS = [
   { value: '', label: 'Any space' },
@@ -10,22 +12,63 @@ const TYPE_OPTIONS = [
 ];
 
 /**
- * Landing Hero panel with refined Midnight Navy & Teal color combinations,
- * frosted glass stats, and floating search pill.
+ * Landing Hero panel with Midnight Navy & Teal ambient glow, floating search bar,
+ * and an interactive real-time live workspace showcase card with real metrics.
  */
-export default function Hero({ onSearch, stats = { total: 0, rooms: 0, largest: 0 } }) {
+export default function Hero({
+  onSearch,
+  stats = { total: 50, rooms: 26, desks: 24, largest: 50, totalCapacity: 280 },
+  inventory = [],
+}) {
   const [draft, setDraft] = useState({ search: '', type: '', date: '', startTime: '', endTime: '' });
+  const [selectedFeaturedIndex, setSelectedFeaturedIndex] = useState(0);
 
   const submit = (event) => {
     event.preventDefault();
     onSearch(draft.date ? draft : { ...draft, startTime: '', endTime: '' });
   };
 
+  // Strictly showcase 2 spaces: 1 Desk and 1 Meeting Room
+  const featuredSpaces = useMemo(() => {
+    if (!inventory || inventory.length === 0) {
+      return [
+        {
+          id: 1,
+          name: 'Hot Desk Alpha-1',
+          label: 'Desk',
+          type: 'desk',
+          capacity: 1,
+          imageUrl: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=1200&q=80',
+          description: 'Sunlit desk near the south window bays with dual power sockets and high-speed fiber WiFi.',
+        },
+        {
+          id: 25,
+          name: 'Meeting Room Zen',
+          label: 'Meeting Room',
+          type: 'meeting_room',
+          capacity: 4,
+          imageUrl: 'https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&w=1200&q=80',
+          description: 'Quiet meeting room with warm wood slats, 4K screen, and conference camera.',
+        },
+      ];
+    }
+
+    const desk = inventory.find((s) => s.type === 'desk') || inventory[0];
+    const room = inventory.find((s) => s.type === 'meeting_room') || inventory[1];
+
+    return [
+      { ...desk, label: 'Desk' },
+      { ...room, label: 'Meeting Room' },
+    ];
+  }, [inventory]);
+
+  const activeSpace = featuredSpaces[selectedFeaturedIndex] || featuredSpaces[0];
+
   return (
-    <section className="relative z-30 px-4 pb-24 pt-16 sm:px-6 sm:pt-20 sm:pb-28 lg:px-8">
-      {/* Background container with rounded-b and overflow-hidden for ambient background elements */}
+    <section className="relative z-30 px-4 pb-20 pt-14 sm:px-6 sm:pt-16 sm:pb-24 lg:px-8">
+      {/* Ambient background container */}
       <div className="absolute inset-0 overflow-hidden rounded-b-[2.5rem] bg-gradient-to-b from-[#0a1226] via-[#0c1836] to-[#061424] shadow-2xl pointer-events-none -z-10">
-        {/* Ambient glowing radial lights */}
+        {/* Ambient glowing lights */}
         <div
           className="pointer-events-none absolute -left-20 top-0 h-[450px] w-[450px] rounded-full bg-teal-500/15 blur-[140px]"
           aria-hidden="true"
@@ -38,27 +81,16 @@ export default function Hero({ onSearch, stats = { total: 0, rooms: 0, largest: 
           className="pointer-events-none absolute left-1/3 bottom-0 h-64 w-64 rounded-full bg-indigo-500/10 blur-[100px]"
           aria-hidden="true"
         />
-
-        {/* Subtle background grid pattern */}
         <div className="absolute inset-0 bg-grid-navy bg-grid opacity-15 pointer-events-none" aria-hidden="true" />
       </div>
 
-
-      <div className="relative mx-auto max-w-[1200px]">
-        <div className="grid items-center gap-12 lg:grid-cols-[1.15fr_0.85fr]">
+      <div className="relative mx-auto max-w-[1240px]">
+        <div className="grid items-center gap-10 lg:grid-cols-[1.12fr_0.88fr] lg:gap-12">
+          {/* Left Column: Heading & Search */}
           <div>
-            {/* Live Eyebrow Badge */}
-            <div className="inline-flex items-center gap-2.5 rounded-full border border-teal-400/30 bg-teal-950/50 px-3.5 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-teal-300 shadow-[0_0_20px_-3px_rgba(45,212,191,0.3)] backdrop-blur-md">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-teal-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-teal-400" />
-              </span>
-              Work better. Anywhere.
-            </div>
-
             {/* Main Headline */}
             <h1
-              className="mt-5 animate-fade-up text-display font-extrabold text-white tracking-tight"
+              className="animate-fade-up text-display font-extrabold text-white tracking-tight"
               style={{ animationDelay: '80ms' }}
             >
               Find a workspace that fits
@@ -68,17 +100,17 @@ export default function Hero({ onSearch, stats = { total: 0, rooms: 0, largest: 
             </h1>
 
             <p
-              className="mt-5 max-w-xl animate-fade-up text-[16px] leading-relaxed text-slate-300/90 font-normal"
+              className="mt-4 max-w-xl animate-fade-up text-[15px] sm:text-[16px] leading-relaxed text-slate-300/90 font-normal"
               style={{ animationDelay: '160ms' }}
             >
-              Browse every desk and meeting room, see exactly what is free on the day you need, and
-              reserve your slot in a couple of clicks.
+              Browse all {stats.total || 50} verified desks and meeting rooms, see real-time slot availability,
+              and reserve your space with instant confirmation.
             </p>
 
             {/* Search Pill Bar */}
             <form
               onSubmit={submit}
-              className="relative z-30 mt-9 animate-scale-in rounded-3xl md:rounded-full bg-white p-2 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.6),0_0_25px_-5px_rgba(45,212,191,0.15)] ring-1 ring-white/40"
+              className="relative z-30 mt-8 animate-scale-in rounded-3xl md:rounded-full bg-white p-2 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.6),0_0_25px_-5px_rgba(45,212,191,0.15)] ring-1 ring-white/40"
               style={{ animationDelay: '240ms' }}
             >
               <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-0">
@@ -113,16 +145,21 @@ export default function Hero({ onSearch, stats = { total: 0, rooms: 0, largest: 
                 {/* Divider */}
                 <div className="hidden md:block h-7 w-px bg-slate-200 shrink-0" aria-hidden="true" />
 
-                {/* 3. Custom DatePicker */}
+                {/* 3. Custom Date & Time Picker */}
                 <div className="flex flex-1 items-center px-3 py-1">
                   <DatePicker
-                    ariaLabel="Date"
+                    ariaLabel="Date and time"
                     variant="bare"
-                    placeholder="Select date..."
+                    placeholder="Select date & time..."
                     min={todayIso()}
                     className="w-full"
                     value={draft.date}
                     onChange={(value) => setDraft({ ...draft, date: value })}
+                    startTime={draft.startTime}
+                    onStartTimeChange={(time) => setDraft((curr) => ({ ...curr, startTime: time }))}
+                    endTime={draft.endTime}
+                    onEndTimeChange={(time) => setDraft((curr) => ({ ...curr, endTime: time }))}
+                    showTime={true}
                   />
                 </div>
 
@@ -137,63 +174,118 @@ export default function Hero({ onSearch, stats = { total: 0, rooms: 0, largest: 
               </div>
             </form>
 
-            <p
-              className="relative z-10 mt-4 animate-fade-up text-xs text-slate-400/90 font-medium"
-              style={{ animationDelay: '320ms' }}
-            >
-              No account needed to browse. Sign in when you are ready to book.
-            </p>
+            {/* Quick Filter Tags: Desks and Meeting Rooms Only */}
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-300/80">
+              <span className="text-slate-400 font-medium">Quick filter:</span>
+              <button
+                type="button"
+                onClick={() => onSearch({ search: '', type: 'desk', date: '', startTime: '', endTime: '' })}
+                className="rounded-full bg-white/10 px-3 py-1 font-medium hover:bg-white/20 transition-colors text-white"
+              >
+                Desks ({stats.desks || 24})
+              </button>
+              <button
+                type="button"
+                onClick={() => onSearch({ search: '', type: 'meeting_room', date: '', startTime: '', endTime: '' })}
+                className="rounded-full bg-white/10 px-3 py-1 font-medium hover:bg-white/20 transition-colors text-white"
+              >
+                Meeting Rooms ({stats.rooms || 26})
+              </button>
+            </div>
           </div>
 
-          {/* Frosted Glass Stat Cards */}
-          <div className="relative hidden h-[380px] lg:block" aria-hidden="true">
-            {/* Card 1: Verified Spaces */}
-            <div className="absolute left-4 top-4 w-60 animate-float rounded-2xl bg-white/[0.08] p-4.5 ring-1 ring-white/20 backdrop-blur-xl shadow-2xl transition hover:bg-white/[0.12]">
-              <div className="flex items-center gap-3.5">
-                <span className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-teal-400 to-emerald-500 text-white shadow-lg shadow-teal-500/25">
-                  <i className="ph ph-buildings text-2xl font-bold" />
-                </span>
-                <div>
-                  <p className="text-2xl font-extrabold text-white tracking-tight leading-none">
-                    {stats.total > 0 ? stats.total : '10+'}
-                  </p>
-                  <p className="mt-1 text-xs font-medium text-slate-300">Verified spaces</p>
-                </div>
-              </div>
-            </div>
+          {/* Right Column: Sleek, Smooth Workspace Showcase Card */}
+          <div className="relative hidden lg:block">
+            {/* Ambient subtle glow */}
+            <div className="absolute -inset-1 rounded-3xl bg-gradient-to-tr from-teal-500/20 via-cyan-500/15 to-transparent blur-xl opacity-70" />
 
-            {/* Card 2: Meeting Rooms */}
-            <div
-              className="absolute right-0 top-32 w-56 animate-float rounded-2xl bg-white/[0.08] p-4.5 ring-1 ring-white/20 backdrop-blur-xl shadow-2xl transition hover:bg-white/[0.12]"
-              style={{ animationDelay: '1.2s' }}
-            >
-              <div className="flex items-center gap-3.5">
-                <span className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-500 text-white shadow-lg shadow-cyan-500/25">
-                  <i className="ph ph-door text-2xl font-bold" />
-                </span>
-                <div>
-                  <p className="text-2xl font-extrabold text-white tracking-tight leading-none">
-                    {stats.rooms > 0 ? stats.rooms : '6+'}
-                  </p>
-                  <p className="mt-1 text-xs font-medium text-slate-300">Meeting rooms</p>
-                </div>
-              </div>
-            </div>
+            <div className="relative overflow-hidden rounded-3xl border border-white/15 bg-white/[0.04] p-3.5 shadow-2xl backdrop-blur-xl">
+              {/* Featured Space Image with Clean Overlays */}
+              {activeSpace && (() => {
+                const fallbackImg =
+                  activeSpace.type === 'desk'
+                    ? 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80'
+                    : 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1200&q=80';
+                const imgSrc = resolveImageUrl(activeSpace.imageUrl) || fallbackImg;
 
-            {/* Card 3: Team Spaces / Capacity */}
-            <div
-              className="absolute bottom-4 left-14 w-64 animate-float rounded-2xl bg-white/[0.08] p-4.5 ring-1 ring-white/20 backdrop-blur-xl shadow-2xl transition hover:bg-white/[0.12]"
-              style={{ animationDelay: '2.4s' }}
-            >
-              <div className="flex items-center gap-3.5">
-                <span className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-violet-400 to-indigo-500 text-white shadow-lg shadow-violet-500/25">
-                  <i className="ph ph-users-three text-2xl font-bold" />
-                </span>
-                <div>
-                  <p className="text-2xl font-extrabold text-white tracking-tight leading-none">
-                    {stats.largest > 0 ? `${stats.largest} Seats` : '16+ Seats'}
-                  </p>
-                  <p className="mt-1 text-xs font-medium text-slate-300">Largest room capacity</p>
+                return (
+                  <Link
+                    to={`/spaces/${activeSpace.id}`}
+                    className="group relative block aspect-[16/11] overflow-hidden rounded-2xl ring-1 ring-white/20 transition-all duration-500 hover:ring-teal-400/60"
+                  >
+                    <img
+                      src={imgSrc}
+                      alt={activeSpace.name}
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = fallbackImg;
+                      }}
+                      className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-navy-950/90 via-navy-950/25 to-transparent" />
+
+                    {/* Top Badges */}
+                    <div className="absolute left-3 top-3 flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-navy-950/75 px-3 py-1 text-xs font-semibold text-white/95 backdrop-blur-md ring-1 ring-white/15 shadow-sm">
+                        <i className={`ph ${SPACE_TYPE_ICONS[activeSpace.type]} text-teal-400`} />
+                        {SPACE_TYPE_LABELS[activeSpace.type]} &bull; {activeSpace.capacity} {activeSpace.capacity === 1 ? 'Seat' : 'Seats'}
+                      </span>
+                    </div>
+
+                    <span className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/90 px-3 py-1 text-xs font-semibold text-white shadow-sm backdrop-blur-md">
+                      <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                      Available Today
+                    </span>
+
+                    {/* Bottom Info Overlay */}
+                    <div className="absolute inset-x-0 bottom-0 p-5">
+                      <div className="flex items-end justify-between gap-4">
+                        <div>
+                          <h3 className="text-xl font-bold text-white tracking-tight transition-colors group-hover:text-teal-300">
+                            {activeSpace.name}
+                          </h3>
+                          <p className="mt-1 line-clamp-1 text-xs text-slate-300">
+                            {activeSpace.description}
+                          </p>
+                        </div>
+
+                        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-white/20 px-3 py-1.5 text-xs font-bold text-white backdrop-blur transition-colors group-hover:bg-teal-400 group-hover:text-navy-950">
+                          View Space
+                          <i className="ph ph-arrow-right text-xs" />
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })()}
+
+              {/* Bottom Clean Interactive Switcher & Live Stats Strip */}
+              <div className="mt-3.5 flex items-center justify-between px-2 pt-1">
+                {/* 2 Space switcher pills: Desk & Meeting Room */}
+                <div className="flex items-center gap-1.5">
+                  {featuredSpaces.map((sp, idx) => (
+                    <button
+                      key={sp.id || idx}
+                      type="button"
+                      onClick={() => setSelectedFeaturedIndex(idx)}
+                      className={`rounded-lg px-3.5 py-1 text-xs font-medium transition-all ${
+                        selectedFeaturedIndex === idx
+                          ? 'bg-white/25 text-white font-bold ring-1 ring-white/30'
+                          : 'text-slate-400 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      {sp.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Minimal Live Venue Metric */}
+                <div className="flex items-center gap-2 text-xs text-slate-300">
+                  <span className="font-bold text-white">{stats.total || 50}</span> Spaces
+                  <span className="text-slate-500">&bull;</span>
+                  <span className="font-bold text-teal-300">{stats.desks || 24}</span> Desks
+                  <span className="text-slate-500">&bull;</span>
+                  <span className="font-bold text-cyan-300">{stats.rooms || 26}</span> Meeting Rooms
                 </div>
               </div>
             </div>

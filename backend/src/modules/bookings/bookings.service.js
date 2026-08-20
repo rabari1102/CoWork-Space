@@ -3,6 +3,29 @@ import { ApiError } from '../../utils/ApiError.js';
 import { dayBounds, formatTimestamp, nowLocal } from '../../utils/datetime.js';
 import { sendBookingStatusEmail } from '../../utils/notifier.js';
 
+// Lightweight read cache for booking list queries
+const cache = new Map();
+const CACHE_TTL_MS = 15 * 1000; // 15 seconds – bookings change more often than spaces
+
+function getCached(key) {
+  const item = cache.get(key);
+  if (!item) return null;
+  if (Date.now() > item.expiresAt) {
+    cache.delete(key);
+    return null;
+  }
+  return item.data;
+}
+
+function setCached(key, data, ttl = CACHE_TTL_MS) {
+  if (cache.size > 500) cache.clear();
+  cache.set(key, { data, expiresAt: Date.now() + ttl });
+}
+
+export function invalidateBookingsCache() {
+  cache.clear();
+}
+
 const mapBooking = (row) => ({
   id: row.id,
   spaceId: row.space_id,
@@ -22,7 +45,8 @@ const BOOKING_SELECT = `
          s.name AS space_name,
          s.type AS space_type,
          u.name AS user_name,
-         u.email AS user_email
+         u.email AS user_email,
+         COUNT(*) OVER () AS total_count
     FROM bookings b
     JOIN spaces s ON s.id = b.space_id
     JOIN users u ON u.id = b.user_id
@@ -73,11 +97,16 @@ export async function createBooking(userId, { spaceId, startsAt, endsAt }) {
       [spaceId, userId, startsAt, endsAt],
     );
 
+    invalidateBookingsCache();
     return mapBooking(await findBookingById(client, inserted.rows[0].id));
   });
 }
 
 export async function listUserBookings(userId, { status, page, limit }) {
+  const cacheKey = `user:${userId}:${JSON.stringify({ status, page, limit })}`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
   const values = [userId];
   let where = 'WHERE b.user_id = $1';
 
@@ -94,15 +123,17 @@ export async function listUserBookings(userId, { status, page, limit }) {
     [...values, limit, offset],
   );
 
-  const counted = await query(
-    `SELECT COUNT(*)::int AS total FROM bookings b ${where}`,
-    values,
-  );
-
-  return buildPage(rows, counted.rows[0].total, page, limit);
+  const total = rows.length > 0 ? Number(rows[0].total_count) : 0;
+  const result = buildPage(rows, total, page, limit);
+  setCached(cacheKey, result);
+  return result;
 }
 
 export async function listAllBookings({ status, spaceId, date, page, limit }) {
+  const cacheKey = `all:${JSON.stringify({ status, spaceId, date, page, limit })}`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
   const conditions = [];
   const values = [];
 
@@ -132,9 +163,10 @@ export async function listAllBookings({ status, spaceId, date, page, limit }) {
     [...values, limit, offset],
   );
 
-  const counted = await query(`SELECT COUNT(*)::int AS total FROM bookings b ${where}`, values);
-
-  return buildPage(rows, counted.rows[0].total, page, limit);
+  const total = rows.length > 0 ? Number(rows[0].total_count) : 0;
+  const result = buildPage(rows, total, page, limit);
+  setCached(cacheKey, result);
+  return result;
 }
 
 function buildPage(rows, total, page, limit) {
@@ -174,6 +206,7 @@ export async function cancelBooking(user, bookingId) {
 
     const updated = mapBooking(await findBookingById(client, bookingId));
     notify(updated);
+    invalidateBookingsCache();
     return updated;
   });
 }
@@ -212,6 +245,7 @@ export async function approveBooking(bookingId) {
     notify(approved);
     clashing.rows.map(mapBooking).forEach(notify);
 
+    invalidateBookingsCache();
     return { booking: approved, autoRejected: clashing.rows.map((row) => row.id) };
   });
 }
@@ -226,8 +260,22 @@ export async function rejectBooking(bookingId) {
 
     const updated = mapBooking(await findBookingById(client, bookingId));
     notify(updated);
+    invalidateBookingsCache();
     return updated;
   });
+}
+
+export async function getUserBookingStats(userId) {
+  const { rows } = await query(
+    `SELECT
+       COUNT(*)::int AS total,
+       COUNT(*) FILTER (WHERE status = 'pending')::int AS pending,
+       COUNT(*) FILTER (WHERE status = 'approved')::int AS approved
+     FROM bookings
+     WHERE user_id = $1`,
+    [userId],
+  );
+  return rows[0];
 }
 
 async function lockPending(client, bookingId) {

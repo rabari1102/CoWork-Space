@@ -6,13 +6,18 @@ import { pool } from './db/pool.js';
 
 /** Waits for Postgres to accept connections; the DB container may still be booting. */
 async function waitForDatabase(attempts = 15) {
+  console.log('🔄 [Database] Verifying database connection...');
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
       await pool.query('SELECT 1');
+      console.log('✅ [Database] Connection ready, proceeding with migrations and server start.');
       return;
     } catch (error) {
-      if (attempt === attempts) throw error;
-      console.log(`database not ready (attempt ${attempt}/${attempts}), retrying...`);
+      if (attempt === attempts) {
+        console.error(`❌ [Database] Failed to connect after ${attempts} attempts:`, error.message);
+        throw error;
+      }
+      console.log(`⏳ [Database] Database not ready yet (attempt ${attempt}/${attempts}): ${error.message}. Retrying in 2s...`);
       await new Promise((resolve) => setTimeout(resolve, 2000));
     }
   }

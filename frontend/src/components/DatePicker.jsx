@@ -31,9 +31,20 @@ function toIso(year, monthIndex, day) {
   return `${y}-${m}-${d}`;
 }
 
+const TIME_PRESETS = [
+  { label: 'All day', start: '09:00', end: '18:00' },
+  { label: 'Morning', start: '09:00', end: '13:00' },
+  { label: 'Afternoon', start: '13:00', end: '18:00' },
+];
+
 export default function DatePicker({
   value,
   onChange,
+  startTime = '',
+  onStartTimeChange,
+  endTime = '',
+  onEndTimeChange,
+  showTime = false,
   min = todayIso(),
   placeholder = 'Select date...',
   variant = 'field',
@@ -46,6 +57,8 @@ export default function DatePicker({
   const containerRef = useRef(null);
   const generatedId = useId();
   const inputId = id || generatedId;
+
+  const hasTimePicker = showTime || Boolean(onStartTimeChange);
 
   // Track the view month & year currently displayed in the calendar
   const initialDate = useMemo(() => parseIso(value) || parseIso(min) || new Date(), [value, min]);
@@ -150,12 +163,16 @@ export default function DatePicker({
     const iso = toIso(dayObj.year, dayObj.month, dayObj.day);
     if (min && iso < min) return;
     onChange(iso);
-    setOpen(false);
+    if (!hasTimePicker) {
+      setOpen(false);
+    }
   };
 
   const handleClear = (e) => {
     e.stopPropagation();
     onChange('');
+    if (onStartTimeChange) onStartTimeChange('');
+    if (onEndTimeChange) onEndTimeChange('');
   };
 
   const handleToday = () => {
@@ -167,20 +184,44 @@ export default function DatePicker({
       setViewYear(d.getFullYear());
       setViewMonth(d.getMonth());
     }
-    setOpen(false);
+    if (!hasTimePicker) {
+      setOpen(false);
+    }
+  };
+
+  const applyPreset = (preset) => {
+    if (!value) {
+      onChange(todayIso());
+    }
+    if (onStartTimeChange) onStartTimeChange(preset.start);
+    if (onEndTimeChange) onEndTimeChange(preset.end);
   };
 
   // Formatted trigger label
   const displayLabel = useMemo(() => {
     if (!value) return placeholder;
     const parsed = parseIso(value);
-    if (!parsed) return value;
-    return parsed.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  }, [value, placeholder]);
+    const dateFormatted = parsed
+      ? parsed.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+        })
+      : value;
+
+    if (startTime && endTime) {
+      return `${dateFormatted} • ${startTime}–${endTime}`;
+    }
+    if (startTime) {
+      return `${dateFormatted} from ${startTime}`;
+    }
+    return parsed
+      ? parsed.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        })
+      : value;
+  }, [value, startTime, endTime, placeholder]);
 
   const todayStr = todayIso();
 
@@ -209,14 +250,14 @@ export default function DatePicker({
         </span>
 
         <span className="flex items-center gap-1 shrink-0">
-          {value && !disabled && (
+          {(value || startTime || endTime) && !disabled && (
             <span
               role="button"
               tabIndex={0}
               onClick={handleClear}
               onKeyDown={(e) => e.key === 'Enter' && handleClear(e)}
               className="p-0.5 text-slate-400 hover:text-slate-600 rounded-full transition-colors"
-              aria-label="Clear date"
+              aria-label="Clear date and time"
             >
               <i className="ph ph-x text-xs" />
             </span>
@@ -232,8 +273,8 @@ export default function DatePicker({
       {open && (
         <div
           role="dialog"
-          aria-label="Calendar date picker"
-          className="absolute left-0 sm:left-auto sm:right-0 top-full z-50 mt-2 w-72 rounded-2xl bg-white p-4 shadow-2xl ring-1 ring-slate-200/90 animate-scale-in"
+          aria-label="Calendar date and time picker"
+          className="absolute left-0 sm:left-auto sm:right-0 top-full z-50 mt-2 w-80 rounded-2xl bg-white p-4 shadow-2xl ring-1 ring-slate-200/90 animate-scale-in"
         >
           {/* Header Month / Year & Navigation */}
           <div className="mb-3 flex items-center justify-between">
@@ -299,25 +340,97 @@ export default function DatePicker({
             })}
           </div>
 
+          {/* Integrated Time Range Selector */}
+          {hasTimePicker && (
+            <div className="mt-3 border-t border-slate-100 pt-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  Time Slot (Optional)
+                </span>
+                <span className="text-[11px] text-slate-400 font-medium">
+                  {value ? 'Selected' : 'Pick date first'}
+                </span>
+              </div>
+
+              {/* Quick Preset Buttons */}
+              <div className="grid grid-cols-3 gap-1.5 mb-2.5">
+                {TIME_PRESETS.map((preset) => {
+                  const isActive = startTime === preset.start && endTime === preset.end;
+                  return (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => applyPreset(preset)}
+                      className={`rounded-lg py-1 px-1.5 text-center text-[11px] font-medium transition-all ${
+                        isActive
+                          ? 'bg-brand-500 text-white font-bold shadow-sm'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-navy-900'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Custom Start / End Time Inputs */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="mb-1 block text-[10px] font-semibold text-slate-500 uppercase">
+                    From
+                  </label>
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => onStartTimeChange && onStartTimeChange(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50/50 px-2 py-1 text-xs font-semibold text-navy-900 focus:border-brand-500 focus:bg-white focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[10px] font-semibold text-slate-500 uppercase">
+                    To
+                  </label>
+                  <input
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => onEndTimeChange && onEndTimeChange(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50/50 px-2 py-1 text-xs font-semibold text-navy-900 focus:border-brand-500 focus:bg-white focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Footer Quick Actions */}
           <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2 text-xs">
             <button
               type="button"
               onClick={() => {
                 onChange('');
+                if (onStartTimeChange) onStartTimeChange('');
+                if (onEndTimeChange) onEndTimeChange('');
                 setOpen(false);
               }}
               className="font-medium text-slate-400 hover:text-slate-600 transition-colors px-2 py-1 rounded"
             >
               Clear
             </button>
-            <button
-              type="button"
-              onClick={handleToday}
-              className="font-semibold text-brand-600 hover:text-brand-700 transition-colors px-2 py-1 rounded hover:bg-brand-50"
-            >
-              Today
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleToday}
+                className="font-semibold text-slate-600 hover:text-navy-900 transition-colors px-2 py-1 rounded hover:bg-slate-100"
+              >
+                Today
+              </button>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="rounded-lg bg-brand-500 px-3 py-1 font-bold text-white shadow-sm hover:bg-brand-600 transition-colors"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}

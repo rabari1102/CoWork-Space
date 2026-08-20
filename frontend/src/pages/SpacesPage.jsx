@@ -20,7 +20,7 @@ const EMPTY_FILTERS = {
   endTime: '',
 };
 
-const PAGE_SIZE = 9;
+const PAGE_SIZE = 12;
 const FILTER_KEYS = Object.keys(EMPTY_FILTERS);
 
 const STEPS = [
@@ -56,6 +56,7 @@ export default function SpacesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [inventory, setInventory] = useState([]);
+  const [summary, setSummary] = useState(null);
   const listRef = useRef(null);
 
   useEffect(() => {
@@ -78,28 +79,38 @@ export default function SpacesPage() {
   // tens of spaces rather than thousands, so a single page covers the inventory.
   useEffect(() => {
     spacesApi
-      .list({ limit: 50 })
-      .then((data) => setInventory(data.data))
+      .summary()
+      .then((data) => {
+        setSummary(data);
+        setInventory(data.spaces);
+      })
       .catch(() => setInventory([]));
   }, []);
 
   const stats = useMemo(() => {
+    if (summary) {
+      return {
+        total: summary.total,
+        desks: summary.desks,
+        rooms: summary.rooms,
+        largest: summary.largest,
+        totalCapacity: summary.totalCapacity,
+        amenities: 0,
+      };
+    }
     const desks = inventory.filter((s) => s.type === 'desk').length;
     const rooms = inventory.filter((s) => s.type === 'meeting_room').length;
     const largest = inventory.reduce((max, s) => Math.max(max, s.capacity), 0);
-    const amenities = new Set(inventory.flatMap((s) => s.amenities));
-    return { total: inventory.length, desks, rooms, largest, amenities: amenities.size };
-  }, [inventory]);
-
-  const categories = useMemo(
-    () => [
-      { label: 'Hot desks', icon: 'ph-desktop', tint: 'from-brand-500 to-cyan-500', query: { type: 'desk' }, count: stats.desks },
-      { label: 'Meeting rooms', icon: 'ph-door', tint: 'from-cyan-500 to-blue-600', query: { type: 'meeting_room' }, count: stats.rooms },
-      { label: 'Team spaces', icon: 'ph-users-three', tint: 'from-violet-500 to-fuchsia-500', query: { minCapacity: '6' }, count: inventory.filter((s) => s.capacity >= 6).length },
-      { label: 'Large rooms', icon: 'ph-projector-screen', tint: 'from-navy-700 to-brand-600', query: { minCapacity: '10' }, count: inventory.filter((s) => s.capacity >= 10).length },
-    ],
-    [stats, inventory],
-  );
+    const totalCapacity = inventory.reduce((sum, s) => sum + s.capacity, 0);
+    return {
+      total: inventory.length,
+      desks,
+      rooms,
+      largest,
+      totalCapacity,
+      amenities: 0,
+    };
+  }, [inventory, summary]);
 
   const apply = (next, { scroll = true } = {}) => {
     const params = {};
@@ -129,72 +140,11 @@ export default function SpacesPage() {
 
   return (
     <>
-      <Hero stats={stats} onSearch={apply} />
+      <Hero stats={stats} inventory={inventory} onSearch={apply} />
 
       <div className="page relative z-10">
-        {/* Real inventory numbers, counted from the API rather than invented. */}
-        <Reveal>
-          <dl className="mt-8 mb-12 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-            {[
-              { label: 'Workspaces', value: stats.total, icon: 'ph-buildings' },
-              { label: 'Hot desks', value: stats.desks, icon: 'ph-desktop' },
-              { label: 'Meeting rooms', value: stats.rooms, icon: 'ph-door' },
-              { label: 'Amenities offered', value: stats.amenities, icon: 'ph-sparkle' },
-            ].map((stat) => (
-              <div key={stat.label} className="card p-5">
-                <i className={`ph ${stat.icon} text-xl text-brand-500`} />
-                <dd className="mt-2 text-3xl font-extrabold tracking-tight text-navy-900">
-                  <CountUp value={stat.value} />
-                </dd>
-                <dt className="mt-0.5 text-[13px] text-slate-500">{stat.label}</dt>
-              </div>
-            ))}
-          </dl>
-        </Reveal>
-
-        {/* Categories */}
-        <section className="mt-20">
-          <Reveal>
-            <p className="eyebrow">Browse by type</p>
-            <h2 className="mt-3 text-section font-extrabold text-navy-900">
-              Every kind of space you need
-            </h2>
-          </Reveal>
-
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {categories.map((category, index) => (
-              <Reveal key={category.label} delay={index * 70}>
-                <button
-                  type="button"
-                  onClick={() => apply({ ...EMPTY_FILTERS, ...category.query })}
-                  className="group relative h-full w-full overflow-hidden rounded-3xl p-6 text-left ring-1 ring-slate-200/80 transition-all duration-300 hover:-translate-y-1 hover:shadow-lift"
-                >
-                  <div
-                    className={`absolute inset-0 bg-gradient-to-br ${category.tint} opacity-[0.07] transition-opacity duration-300 group-hover:opacity-[0.14]`}
-                  />
-                  <div className="relative">
-                    <span
-                      className={`grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br ${category.tint} text-white shadow-md transition-transform duration-300 group-hover:scale-110`}
-                    >
-                      <i className={`ph ${category.icon} text-2xl`} />
-                    </span>
-                    <h3 className="mt-4 text-lg font-bold text-navy-900">{category.label}</h3>
-                    <p className="mt-1 text-sm text-slate-500">
-                      {category.count} {category.count === 1 ? 'space' : 'spaces'}
-                    </p>
-                    <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600">
-                      Browse
-                      <i className="ph ph-arrow-right transition-transform duration-300 group-hover:translate-x-1" />
-                    </span>
-                  </div>
-                </button>
-              </Reveal>
-            ))}
-          </div>
-        </section>
-
         {/* How it works */}
-        <section className="mt-24">
+        <section className="mt-8 sm:mt-12 mb-16 sm:mb-20">
           <Reveal className="text-center">
             <p className="eyebrow justify-center">How it works</p>
             <h2 className="mx-auto mt-3 max-w-2xl text-section font-extrabold text-navy-900">
@@ -222,21 +172,52 @@ export default function SpacesPage() {
           </div>
         </section>
 
-        {/* Listing */}
-        <section ref={listRef} className="mt-24 scroll-mt-24">
-          <Reveal className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+        {/* Workspace Catalog / Explore Inventory */}
+        <section ref={listRef} className="scroll-mt-24">
+          <Reveal className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
             <div>
-              <p className="eyebrow">All workspaces</p>
-              <h2 className="mt-3 text-section font-extrabold text-navy-900">
-                {isFiltered ? 'Matching your search' : 'Browse every space'}
+              <p className="eyebrow">Explore Inventory</p>
+              <h2 className="mt-1.5 text-2xl sm:text-3xl font-extrabold text-navy-900 tracking-tight">
+                {isFiltered ? 'Matching Workspaces' : 'All Workspaces'}
               </h2>
             </div>
-            {result.pagination && !loading && (
-              <p className="text-sm text-slate-500">
-                <span className="font-semibold text-navy-900">{result.pagination.total}</span>{' '}
-                {result.pagination.total === 1 ? 'space' : 'spaces'} found
-              </p>
-            )}
+
+            {/* Quick Type Filter Tabs */}
+            <div className="flex items-center gap-1.5 rounded-2xl bg-slate-100/90 p-1.5 ring-1 ring-slate-200">
+              <button
+                type="button"
+                onClick={() => apply({ ...filters, type: '', page: '' })}
+                className={`rounded-xl px-4 py-1.5 text-xs font-bold transition-all ${
+                  filters.type === ''
+                    ? 'bg-white text-navy-900 shadow-sm ring-1 ring-slate-200/60'
+                    : 'text-slate-500 hover:text-navy-900'
+                }`}
+              >
+                All ({stats.total || 50})
+              </button>
+              <button
+                type="button"
+                onClick={() => apply({ ...filters, type: 'desk', page: '' })}
+                className={`rounded-xl px-4 py-1.5 text-xs font-bold transition-all ${
+                  filters.type === 'desk'
+                    ? 'bg-white text-navy-900 shadow-sm ring-1 ring-slate-200/60'
+                    : 'text-slate-500 hover:text-navy-900'
+                }`}
+              >
+                Desks ({stats.desks || 24})
+              </button>
+              <button
+                type="button"
+                onClick={() => apply({ ...filters, type: 'meeting_room', page: '' })}
+                className={`rounded-xl px-4 py-1.5 text-xs font-bold transition-all ${
+                  filters.type === 'meeting_room'
+                    ? 'bg-white text-navy-900 shadow-sm ring-1 ring-slate-200/60'
+                    : 'text-slate-500 hover:text-navy-900'
+                }`}
+              >
+                Meeting Rooms ({stats.rooms || 26})
+              </button>
+            </div>
           </Reveal>
 
           <SpaceFilters
@@ -252,8 +233,8 @@ export default function SpacesPage() {
           )}
 
           {loading ? (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, index) => (
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, index) => (
                 <SpaceCardSkeleton key={index} />
               ))}
             </div>
@@ -266,9 +247,9 @@ export default function SpacesPage() {
               onAction={() => apply(EMPTY_FILTERS, { scroll: false })}
             />
           ) : (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {result.data.map((space, index) => (
-                <Reveal key={space.id} delay={Math.min(index, 5) * 60}>
+                <Reveal key={space.id} delay={Math.min(index, 7) * 45}>
                   <SpaceCard space={space} availableOn={badge} />
                 </Reveal>
               ))}

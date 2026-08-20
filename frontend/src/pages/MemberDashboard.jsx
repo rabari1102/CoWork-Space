@@ -2,12 +2,18 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Alert from '../components/Alert.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
+import Modal from '../components/Modal.jsx';
 import Pagination from '../components/Pagination.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
 import { readApiError } from '../api/client.js';
 import { bookingsApi } from '../api/endpoints.js';
 import { useToast } from '../context/ToastContext.jsx';
-import { formatDate, formatTime, SPACE_TYPE_ICONS } from '../utils/format.js';
+import {
+  formatDate,
+  formatTime,
+  SPACE_TYPE_ICONS,
+  SPACE_TYPE_LABELS,
+} from '../utils/format.js';
 
 const TABS = ['all', 'pending', 'approved', 'rejected', 'cancelled'];
 
@@ -27,39 +33,33 @@ export default function MemberDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [cancelTarget, setCancelTarget] = useState(null);
+  const [viewBooking, setViewBooking] = useState(null);
 
-  const load = useCallback(() => {
-    setLoading(true);
+  const load = useCallback((showSpinner = true) => {
+    if (showSpinner) setLoading(true);
     setError('');
     return bookingsApi
       .mine({ page, limit: 10, ...(status === 'all' ? {} : { status }) })
       .then(setResult)
       .catch((err) => setError(readApiError(err, 'Could not load your bookings')))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (showSpinner) setLoading(false);
+      });
   }, [page, status]);
 
   // Counts come from the API rather than the current page, so they stay right
   // no matter which tab is open or how many bookings the member has.
   const loadStats = useCallback(
     () =>
-      Promise.all([
-        bookingsApi.mine({ limit: 1 }),
-        bookingsApi.mine({ limit: 1, status: 'pending' }),
-        bookingsApi.mine({ limit: 1, status: 'approved' }),
-      ])
-        .then(([all, pending, approved]) =>
-          setStats({
-            total: all.pagination.total,
-            pending: pending.pagination.total,
-            approved: approved.pagination.total,
-          }),
-        )
+      bookingsApi
+        .myStats()
+        .then(setStats)
         .catch(() => {}),
     [],
   );
 
   useEffect(() => {
-    load();
+    load(true);
   }, [load]);
 
   useEffect(() => {
@@ -67,15 +67,30 @@ export default function MemberDashboard() {
   }, [loadStats]);
 
   const cancelBooking = async () => {
-    await bookingsApi.cancel(cancelTarget.id);
+    const targetId = cancelTarget.id;
     setCancelTarget(null);
-    toast('Booking cancelled successfully.', 'info');
-    await Promise.all([load(), loadStats()]);
+    if (viewBooking?.id === targetId) {
+      setViewBooking(null);
+    }
+
+    // Optimistic update: flip status to 'cancelled' immediately
+    setResult((prev) => ({
+      ...prev,
+      data: prev.data.map((b) => (b.id === targetId ? { ...b, status: 'cancelled' } : b)),
+    }));
+
+    try {
+      await bookingsApi.cancel(targetId);
+      toast('Booking cancelled successfully.', 'info');
+    } catch (err) {
+      toast(readApiError(err, 'Could not cancel booking'), 'error');
+    }
+    await Promise.all([load(false), loadStats()]);
   };
 
   // The API allows cancelling only a future booking that is still live.
   const isCancellable = (booking) =>
-    ['pending', 'approved'].includes(booking.status) && new Date(booking.startsAt) > new Date();
+    ['pending', 'approved'].includes(booking?.status) && new Date(booking?.startsAt) > new Date();
 
   return (
     <div className="page">
@@ -163,7 +178,7 @@ export default function MemberDashboard() {
             >
               <div className="flex items-start gap-4">
                 <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-slate-500 ring-1 ring-slate-200 sm:flex">
-                  <i className={`ph ${SPACE_TYPE_ICONS[booking.spaceType]} text-xl`} />
+                  <i className={`ph ${SPACE_TYPE_ICONS[booking.spaceType] || 'ph-door'} text-xl`} />
                 </div>
                 <div>
                   <div className="mb-1 flex flex-wrap items-center gap-2">
@@ -182,17 +197,24 @@ export default function MemberDashboard() {
                 </div>
               </div>
 
-              <div className="flex justify-end border-t border-slate-100 pt-3 sm:border-0 sm:pt-0">
-                {isCancellable(booking) ? (
+              <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-3 sm:border-0 sm:pt-0">
+                <button
+                  type="button"
+                  onClick={() => setViewBooking(booking)}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200 transition-colors shadow-xs"
+                >
+                  <i className="ph ph-eye text-sm" />
+                  <span>View Details</span>
+                </button>
+                {isCancellable(booking) && (
                   <button
                     type="button"
                     onClick={() => setCancelTarget(booking)}
-                    className="rounded border border-transparent px-3 py-1.5 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50 hover:text-rose-700"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-100 transition-colors shadow-xs"
                   >
-                    Cancel booking
+                    <i className="ph ph-trash text-sm" />
+                    <span>Cancel</span>
                   </button>
-                ) : (
-                  <span className="text-xs text-slate-400">No action</span>
                 )}
               </div>
             </li>
@@ -202,6 +224,87 @@ export default function MemberDashboard() {
 
       <Pagination pagination={result.pagination} onChange={setPage} noun="booking" />
 
+      {/* Booking Details Modal */}
+      {viewBooking && (
+        <Modal
+          title="Booking Details"
+          subtitle={`Reservation #${viewBooking.id}`}
+          onClose={() => setViewBooking(null)}
+        >
+          <div className="space-y-5">
+            <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200/80">
+              <div className="flex items-center gap-3">
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-white text-teal-600 ring-1 ring-slate-200 shadow-xs">
+                  <i className={`ph ${SPACE_TYPE_ICONS[viewBooking.spaceType] || 'ph-door'} text-xl`} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-navy-900">{viewBooking.spaceName}</h3>
+                  <p className="text-xs text-slate-400 capitalize">
+                    {SPACE_TYPE_LABELS[viewBooking.spaceType] || viewBooking.spaceType?.replace('_', ' ')}
+                  </p>
+                </div>
+              </div>
+              <StatusBadge status={viewBooking.status} />
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-slate-100 bg-white p-3 shadow-xs">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Date</p>
+                <p className="mt-1 font-semibold text-navy-900">{formatDate(viewBooking.startsAt)}</p>
+              </div>
+              <div className="rounded-xl border border-slate-100 bg-white p-3 shadow-xs">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Time Slot</p>
+                <p className="mt-1 font-semibold text-navy-900">
+                  {formatTime(viewBooking.startsAt)} – {formatTime(viewBooking.endsAt)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-100 bg-white p-3 shadow-xs">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Reserved For</p>
+                <p className="mt-1 font-semibold text-navy-900">{viewBooking.userName}</p>
+                <p className="text-xs text-slate-400">{viewBooking.userEmail}</p>
+              </div>
+              <div className="rounded-xl border border-slate-100 bg-white p-3 shadow-xs">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Requested On</p>
+                <p className="mt-1 font-semibold text-navy-900">{formatDate(viewBooking.createdAt)}</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-3 sm:flex-row sm:justify-between">
+              <Link
+                to={`/spaces/${viewBooking.spaceId}`}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-navy-900 shadow-xs hover:bg-slate-50 transition-colors"
+                onClick={() => setViewBooking(null)}
+              >
+                <i className="ph ph-arrow-square-out text-sm" />
+                <span>View Workspace Page</span>
+              </Link>
+              <div className="flex items-center gap-2">
+                {isCancellable(viewBooking) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCancelTarget(viewBooking);
+                    }}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-rose-50 px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-100 transition-colors"
+                  >
+                    <i className="ph ph-trash text-sm" />
+                    <span>Cancel Booking</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setViewBooking(null)}
+                  className="inline-flex items-center justify-center rounded-xl bg-slate-100 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Cancel Confirmation Dialog */}
       {cancelTarget && (
         <ConfirmDialog
           title="Cancel this booking?"

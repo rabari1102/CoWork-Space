@@ -16,6 +16,7 @@ export const spacesApi = {
   create: (payload) => api.post('/spaces', payload).then((res) => res.data.space),
   update: (id, payload) => api.patch(`/spaces/${id}`, payload).then((res) => res.data.space),
   remove: (id) => api.delete(`/spaces/${id}`),
+  summary: () => api.get('/spaces/summary').then((res) => res.data),
   maintenance: (id) => api.get(`/spaces/${id}/maintenance`).then((res) => res.data.data),
   addMaintenance: (id, payload) =>
     api.post(`/spaces/${id}/maintenance`, payload).then((res) => res.data.maintenance),
@@ -26,8 +27,21 @@ export const spacesApi = {
 export const bookingsApi = {
   create: (payload) => api.post('/bookings', payload).then((res) => res.data.booking),
   mine: (params) => api.get('/bookings/me', { params }).then((res) => res.data),
+  myStats: () => api.get('/bookings/me/stats').then((res) => res.data.stats),
   all: (params) => api.get('/bookings', { params }).then((res) => res.data),
   cancel: (id) => api.patch(`/bookings/${id}/cancel`).then((res) => res.data.booking),
   approve: (id) => api.patch(`/bookings/${id}/approve`).then((res) => res.data),
   reject: (id) => api.patch(`/bookings/${id}/reject`).then((res) => res.data.booking),
+};
+
+export const uploadApi = {
+  uploadImage: (file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    return api
+      .post('/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((res) => res.data);
+  },
 };

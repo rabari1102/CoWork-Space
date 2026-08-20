@@ -28,3 +28,8 @@ export const reject = asyncHandler(async (req, res) => {
   const booking = await bookingsService.rejectBooking(req.params.id);
   res.json({ booking });
 });
+
+export const myStats = asyncHandler(async (req, res) => {
+  const stats = await bookingsService.getUserBookingStats(req.user.id);
+  res.json({ stats });
+});

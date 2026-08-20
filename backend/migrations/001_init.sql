@@ -30,6 +30,7 @@ CREATE TABLE spaces (
     capacity    INTEGER NOT NULL CHECK (capacity > 0),
     amenities   TEXT[] NOT NULL DEFAULT '{}',
     description TEXT NOT NULL DEFAULT '',
+    image_url   TEXT NOT NULL DEFAULT '',
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );

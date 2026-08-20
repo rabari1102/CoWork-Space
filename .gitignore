@@ -6,3 +6,6 @@ npm-debug.log*
 .DS_Store
 .vscode/
 .idea/
+backend/uploads/*
+!backend/uploads/.gitkeep
+

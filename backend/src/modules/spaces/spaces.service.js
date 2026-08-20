@@ -2,6 +2,29 @@ import { query } from '../../db/pool.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { dayBounds, formatTimestamp } from '../../utils/datetime.js';
 
+// High-speed in-memory cache for workspace lists and details
+const cache = new Map();
+const CACHE_TTL_MS = 60 * 1000; // 60 seconds
+
+function getCached(key) {
+  const item = cache.get(key);
+  if (!item) return null;
+  if (Date.now() > item.expiresAt) {
+    cache.delete(key);
+    return null;
+  }
+  return item.data;
+}
+
+function setCached(key, data, ttl = CACHE_TTL_MS) {
+  if (cache.size > 500) cache.clear();
+  cache.set(key, { data, expiresAt: Date.now() + ttl });
+}
+
+export function invalidateSpacesCache() {
+  cache.clear();
+}
+
 const mapSpace = (row) => ({
   id: row.id,
   name: row.name,
@@ -9,11 +32,18 @@ const mapSpace = (row) => ({
   capacity: row.capacity,
   amenities: row.amenities,
   description: row.description,
+  imageUrl: row.image_url || '',
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
 
 export async function listSpaces(filters) {
+  const cacheKey = `list:${JSON.stringify(filters)}`;
+  const cached = getCached(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   const { search, type, minCapacity, date, startTime, endTime, page, limit } = filters;
   const conditions = [];
   const values = [];
@@ -69,7 +99,7 @@ export async function listSpaces(filters) {
 
   const total = rows.length > 0 ? Number(rows[0].total_count) : 0;
 
-  return {
+  const result = {
     data: rows.map(mapSpace),
     pagination: {
       page,
@@ -78,6 +108,9 @@ export async function listSpaces(filters) {
       totalPages: Math.max(1, Math.ceil(total / limit)),
     },
   };
+
+  setCached(cacheKey, result);
+  return result;
 }
 
 export async function getSpace(id) {
@@ -137,11 +170,19 @@ export async function getAvailability(spaceId, date) {
 
 export async function createSpace(payload) {
   const { rows } = await query(
-    `INSERT INTO spaces (name, type, capacity, amenities, description)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO spaces (name, type, capacity, amenities, description, image_url)
+     VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING *`,
-    [payload.name, payload.type, payload.capacity, payload.amenities, payload.description],
+    [
+      payload.name,
+      payload.type,
+      payload.capacity,
+      payload.amenities,
+      payload.description,
+      payload.imageUrl || '',
+    ],
   );
+  invalidateSpacesCache();
   return mapSpace(rows[0]);
 }
 
@@ -152,6 +193,7 @@ export async function updateSpace(id, payload) {
     capacity: payload.capacity,
     amenities: payload.amenities,
     description: payload.description,
+    image_url: payload.imageUrl,
   };
 
   const assignments = [];
@@ -174,6 +216,7 @@ export async function updateSpace(id, payload) {
   if (rows.length === 0) {
     throw ApiError.notFound('Space not found');
   }
+  invalidateSpacesCache();
   return mapSpace(rows[0]);
 }
 
@@ -183,4 +226,32 @@ export async function deleteSpace(id) {
   if (rowCount === 0) {
     throw ApiError.notFound('Space not found');
   }
+  invalidateSpacesCache();
+}
+
+export async function getSpacesSummary() {
+  const cacheKey = 'summary';
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
+  const { rows } = await query(
+    `SELECT id, name, type, capacity FROM spaces ORDER BY name ASC`,
+  );
+
+  const desks = rows.filter((r) => r.type === 'desk').length;
+  const rooms = rows.filter((r) => r.type === 'meeting_room').length;
+  const largest = rows.reduce((max, r) => Math.max(max, r.capacity), 0);
+  const totalCapacity = rows.reduce((sum, r) => sum + r.capacity, 0);
+
+  const result = {
+    total: rows.length,
+    desks,
+    rooms,
+    largest,
+    totalCapacity,
+    spaces: rows.map((r) => ({ id: r.id, name: r.name, type: r.type, capacity: r.capacity })),
+  };
+
+  setCached(cacheKey, result, 120_000);
+  return result;
 }

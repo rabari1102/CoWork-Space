@@ -1,0 +1,296 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "CoWork Space Booking API",
+    "description": "REST API for workspace and meeting room reservations with PostgreSQL GiST exclusion concurrency safety, JWT authentication with token rotation, and admin management.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:4000/api",
+      "description": "Local Development Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "name": { "type": "string", "example": "Sarah Connor" },
+          "email": { "type": "string", "format": "email", "example": "sarah@example.com" },
+          "role": { "type": "string", "enum": ["member", "admin"], "example": "member" }
+        }
+      },
+      "Space": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "name": { "type": "string", "example": "Hot Desk Alpha-1" },
+          "type": { "type": "string", "enum": ["desk", "meeting_room"], "example": "desk" },
+          "capacity": { "type": "integer", "example": 1 },
+          "amenities": {
+            "type": "array",
+            "items": { "type": "string" },
+            "example": ["Dual 4K Monitors", "Ergonomic Chair", "Gigabit Fiber WiFi"]
+          },
+          "description": { "type": "string", "example": "Sunlit window desk with sit-stand converter." },
+          "imageUrl": { "type": "string", "format": "uri", "example": "https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=1200&q=80" }
+        }
+      },
+      "Booking": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "spaceId": { "type": "integer", "example": 1 },
+          "spaceName": { "type": "string", "example": "Hot Desk Alpha-1" },
+          "spaceType": { "type": "string", "example": "desk" },
+          "userId": { "type": "integer", "example": 2 },
+          "userName": { "type": "string", "example": "Sarah Connor" },
+          "userEmail": { "type": "string", "example": "sarah@example.com" },
+          "startsAt": { "type": "string", "example": "2026-08-20 09:00:00" },
+          "endsAt": { "type": "string", "example": "2026-08-20 17:00:00" },
+          "status": { "type": "string", "enum": ["pending", "approved", "rejected", "cancelled"], "example": "pending" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "responses": {
+          "200": { "description": "API is operational" }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "summary": "Register a new member account",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "password"],
+                "properties": {
+                  "name": { "type": "string", "example": "Jane Doe" },
+                  "email": { "type": "string", "format": "email", "example": "jane@example.com" },
+                  "password": { "type": "string", "minLength": 8, "example": "password123" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Account created successfully" },
+          "409": { "description": "Email already in use" }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Sign in with email and password",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "example": "member@cowork.test" },
+                  "password": { "type": "string", "example": "member1234" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Authentication successful" },
+          "401": { "description": "Invalid email or password" }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "summary": "Rotate refresh token and issue new token pair",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refreshToken"],
+                "properties": {
+                  "refreshToken": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Tokens refreshed" },
+          "401": { "description": "Invalid or revoked refresh token" }
+        }
+      }
+    },
+    "/spaces": {
+      "get": {
+        "summary": "List spaces with filtering, search, and pagination",
+        "parameters": [
+          { "name": "search", "in": "query", "schema": { "type": "string" } },
+          { "name": "type", "in": "query", "schema": { "type": "string", "enum": ["desk", "meeting_room"] } },
+          { "name": "minCapacity", "in": "query", "schema": { "type": "integer" } },
+          { "name": "date", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 12 } }
+        ],
+        "responses": {
+          "200": { "description": "Paginated workspace list" }
+        }
+      },
+      "post": {
+        "summary": "Create a workspace (Admin only)",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "type", "capacity"],
+                "properties": {
+                  "name": { "type": "string", "example": "Meeting Room Apex" },
+                  "type": { "type": "string", "enum": ["desk", "meeting_room"] },
+                  "capacity": { "type": "integer", "example": 8 },
+                  "amenities": { "type": "array", "items": { "type": "string" } },
+                  "description": { "type": "string" },
+                  "imageUrl": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Space created" },
+          "403": { "description": "Admin access required" }
+        }
+      }
+    },
+    "/spaces/{id}": {
+      "get": {
+        "summary": "Get workspace details by ID",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": { "description": "Space details" },
+          "404": { "description": "Space not found" }
+        }
+      }
+    },
+    "/spaces/{id}/availability": {
+      "get": {
+        "summary": "Get day availability schedule for a space",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "date", "in": "query", "required": true, "schema": { "type": "string", "format": "date" } }
+        ],
+        "responses": {
+          "200": { "description": "Availability schedule with bookings and maintenance windows" }
+        }
+      }
+    },
+    "/bookings": {
+      "get": {
+        "summary": "List all bookings (Admin only)",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["pending", "approved", "rejected", "cancelled"] } },
+          { "name": "spaceId", "in": "query", "schema": { "type": "integer" } },
+          { "name": "date", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 10 } }
+        ],
+        "responses": {
+          "200": { "description": "Paginated bookings" }
+        }
+      },
+      "post": {
+        "summary": "Create a space reservation (Concurrency safe)",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["spaceId", "startsAt", "endsAt"],
+                "properties": {
+                  "spaceId": { "type": "integer", "example": 1 },
+                  "startsAt": { "type": "string", "example": "2026-08-20T10:00:00" },
+                  "endsAt": { "type": "string", "example": "2026-08-20T12:00:00" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Booking request created" },
+          "409": { "description": "Slot already booked or under maintenance" }
+        }
+      }
+    },
+    "/bookings/mine": {
+      "get": {
+        "summary": "List authenticated member's bookings",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } }
+        ],
+        "responses": {
+          "200": { "description": "User's bookings" }
+        }
+      }
+    },
+    "/bookings/{id}/cancel": {
+      "post": {
+        "summary": "Cancel own future booking",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": { "description": "Booking cancelled" },
+          "409": { "description": "Cannot cancel past or completed booking" }
+        }
+      }
+    },
+    "/bookings/{id}/approve": {
+      "post": {
+        "summary": "Approve a booking and auto-reject overlapping pending requests (Admin only)",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": { "description": "Booking approved" }
+        }
+      }
+    },
+    "/bookings/{id}/reject": {
+      "post": {
+        "summary": "Reject a booking request (Admin only)",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": { "description": "Booking rejected" }
+        }
+      }
+    }
+  }
+}

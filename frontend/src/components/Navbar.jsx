@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import ConfirmDialog from './ConfirmDialog.jsx';
 import Logo from './Logo.jsx';
 import ProfileModal from './ProfileModal.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -24,6 +25,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [modalTab, setModalTab] = useState(null); // 'view' | 'edit' | null
+  const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false);
   const profileMenuRef = useRef(null);
 
   useEffect(() => {
@@ -59,8 +61,9 @@ export default function Navbar() {
   }, []);
 
   const handleSignOut = async () => {
+    setConfirmLogoutOpen(false);
     await signOut();
-    toast('Signed out.', 'info');
+    toast('You have been signed out successfully.', 'info');
     navigate('/');
   };
 
@@ -78,15 +81,25 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 px-3 pt-3 sm:px-5 sm:pt-4">
-        <nav
-          className={`mx-auto flex max-w-[1200px] items-center justify-between gap-4 rounded-2xl px-3 transition-all duration-300 sm:px-4 ${
-            scrolled
-              ? 'h-14 bg-white/95 shadow-lift ring-1 ring-slate-200/90 backdrop-blur-xl'
-              : 'h-16 bg-white/90 shadow-soft ring-1 ring-slate-200/70 backdrop-blur-xl'
-          }`}
-        >
-          <Link to="/" className="shrink-0" aria-label="CoworkDesk home">
+      <header
+        className={`sticky top-0 z-40 w-full transition-all duration-300 ${
+          scrolled
+            ? 'bg-white/95 backdrop-blur-xl border-b border-slate-200/90 shadow-sm'
+            : 'bg-white/90 backdrop-blur-xl border-b border-slate-200/60'
+        }`}
+      >
+        <nav className="mx-auto flex h-16 max-w-[1280px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+          <Link
+            to="/"
+            onClick={(e) => {
+              if (location.pathname === '/') {
+                e.preventDefault();
+              }
+              window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+            }}
+            className="shrink-0"
+            aria-label="CoworkDesk home"
+          >
             <Logo />
           </Link>
 
@@ -209,7 +222,7 @@ export default function Navbar() {
                       type="button"
                       onClick={() => {
                         setProfileOpen(false);
-                        handleSignOut();
+                        setConfirmLogoutOpen(true);
                       }}
                       className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-rose-600 transition hover:bg-rose-50"
                     >
@@ -220,7 +233,6 @@ export default function Navbar() {
                 )}
               </div>
             ) : (
-
               <>
                 <Link to="/login" className="btn-ghost">
                   Sign in
@@ -248,7 +260,15 @@ export default function Navbar() {
           <div className="glass-backdrop absolute inset-0 animate-fade-in" onClick={() => setOpen(false)} />
           <div className="absolute bottom-0 right-0 top-0 flex w-[80%] max-w-xs animate-slide-in-right flex-col bg-white shadow-modal">
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-              <Logo />
+              <Link
+                to="/"
+                onClick={() => {
+                  setOpen(false);
+                  window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+                }}
+              >
+                <Logo />
+              </Link>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
@@ -320,7 +340,14 @@ export default function Navbar() {
 
               <div className="mt-auto pt-4">
                 {user ? (
-                  <button type="button" onClick={handleSignOut} className="btn-secondary w-full text-rose-600 hover:bg-rose-50 hover:text-rose-700">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(false);
+                      setConfirmLogoutOpen(true);
+                    }}
+                    className="btn-secondary w-full text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                  >
                     <i className="ph ph-sign-out" /> Sign out
                   </button>
                 ) : (
@@ -343,6 +370,24 @@ export default function Navbar() {
         <ProfileModal
           initialTab={modalTab}
           onClose={() => setModalTab(null)}
+        />
+      )}
+
+      {confirmLogoutOpen && (
+        <ConfirmDialog
+          title="Sign out of your account?"
+          icon="ph-sign-out"
+          tone="danger"
+          rows={[
+            { label: 'Signed in as', value: user?.name },
+            { label: 'Account role', value: user?.role === 'admin' ? 'Administrator' : 'Member' },
+            { label: 'Email address', value: user?.email },
+          ]}
+          note="Are you sure you want to end your current session? You can sign back in anytime with your email and password."
+          cancelLabel="Stay signed in"
+          confirmLabel="Sign out"
+          onConfirm={handleSignOut}
+          onClose={() => setConfirmLogoutOpen(false)}
         />
       )}
     </>

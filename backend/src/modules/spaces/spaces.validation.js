@@ -20,7 +20,7 @@ export const listSpacesSchema = {
       startTime: z.string().regex(TIME_PATTERN, 'Start time must be in HH:mm format').optional(),
       endTime: z.string().regex(TIME_PATTERN, 'End time must be in HH:mm format').optional(),
       page: z.coerce.number().int().min(1).default(1),
-      limit: z.coerce.number().int().min(1).max(50).default(9),
+      limit: z.coerce.number().int().min(1).max(100).default(9),
     })
     .refine((value) => !value.startTime || !value.endTime || value.startTime < value.endTime, {
       message: 'End time must be after start time',
@@ -45,6 +45,7 @@ const spaceBody = z.object({
   capacity: z.coerce.number().int().min(1, 'Capacity must be at least 1').max(500),
   amenities: z.array(z.string().trim().min(1).max(40)).max(20).default([]),
   description: z.string().trim().max(500).default(''),
+  imageUrl: z.string().trim().max(1000).optional().default(''),
 });
 
 export const createSpaceSchema = { body: spaceBody };

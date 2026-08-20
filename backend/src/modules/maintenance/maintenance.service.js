@@ -25,6 +25,21 @@ export async function createWindow(spaceId, { startsAt, endsAt, reason }) {
       throw ApiError.notFound('Space not found');
     }
 
+    // Check if another maintenance window already covers this range
+    const existingMaintenance = await client.query(
+      `SELECT 1 FROM maintenance_windows
+        WHERE space_id = $1
+          AND tsrange(starts_at, ends_at, '[)') && tsrange($2::timestamp, $3::timestamp, '[)')
+        LIMIT 1`,
+      [spaceId, startsAt, endsAt],
+    );
+    if (existingMaintenance.rowCount > 0) {
+      throw ApiError.conflict(
+        'MAINTENANCE_OVERLAP',
+        'This workspace already has a scheduled maintenance window during that time range. Please select a different time or date.',
+      );
+    }
+
     // Blocking out a range that members have already reserved would leave the
     // space double-committed, so refuse instead of silently overriding them.
     const clash = await client.query(

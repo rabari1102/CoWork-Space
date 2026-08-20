@@ -94,7 +94,7 @@
   /* Standard page gutter. Lives here so the hero can sit outside it and run
      edge to edge while every other section stays aligned. */
   .page {
-    @apply mx-auto w-full max-w-[1200px] px-4 py-8 sm:px-6 lg:px-8;
+    @apply mx-auto w-full max-w-[1380px] px-4 py-8 sm:px-6 lg:px-8;
   }
 
   .eyebrow {
@@ -144,17 +144,24 @@
   }
 }
 
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* Hide scrollbar across Chrome, Safari, Edge, Firefox, and Opera while retaining 100% full scrollability */
+html,
+body {
+  -ms-overflow-style: none; /* IE & Edge */
+  scrollbar-width: none; /* Firefox */
+  overflow-x: hidden;
 }
-::-webkit-scrollbar-track {
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
   background: transparent;
 }
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

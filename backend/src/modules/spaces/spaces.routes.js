@@ -20,6 +20,7 @@ export const spacesRouter = Router();
 
 // Public: visitors browse spaces and check availability without logging in.
 spacesRouter.get('/', validate(listSpacesSchema), controller.list);
+spacesRouter.get('/summary', controller.summary);
 spacesRouter.get('/:id', validate(idParamSchema), controller.detail);
 spacesRouter.get('/:id/availability', validate(availabilitySchema), controller.availability);
 
