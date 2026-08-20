@@ -235,7 +235,7 @@ export async function getSpacesSummary() {
   if (cached) return cached;
 
   const { rows } = await query(
-    `SELECT id, name, type, capacity FROM spaces ORDER BY name ASC`,
+    `SELECT id, name, type, capacity, description, image_url FROM spaces ORDER BY name ASC`,
   );
 
   const desks = rows.filter((r) => r.type === 'desk').length;
@@ -249,9 +249,16 @@ export async function getSpacesSummary() {
     rooms,
     largest,
     totalCapacity,
-    spaces: rows.map((r) => ({ id: r.id, name: r.name, type: r.type, capacity: r.capacity })),
+    spaces: rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      type: r.type,
+      capacity: r.capacity,
+      description: r.description || '',
+      imageUrl: r.image_url || '',
+    })),
   };
 
-  setCached(cacheKey, result, 120_000);
+  setCached(cacheKey, result, 60_000);
   return result;
 }
