@@ -71,8 +71,14 @@ export function resolveImageUrl(url) {
     return url;
   }
   if (url.startsWith('/uploads/')) {
-    const apiOrigin = import.meta.env.VITE_API_ORIGIN || 'http://localhost:4000';
-    return `${apiOrigin}${url}`;
+    const apiUrl = import.meta.env.VITE_API_URL || '';
+    if (apiUrl.startsWith('http://') || apiUrl.startsWith('https://')) {
+      try {
+        const origin = new URL(apiUrl).origin;
+        return `${origin}${url}`;
+      } catch {}
+    }
+    return url;
   }
   return url;
 }
