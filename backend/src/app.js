@@ -62,7 +62,8 @@ app.use(
 // the logs without guessing at what the environment variable actually held.
 console.log(`CORS allowing: ${config.corsOrigin.join(', ')} (and local origins in ${config.env})`);
 app.use(compression());
-app.use(express.json({ limit: '100kb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.get('/api/docs', docsRouter);

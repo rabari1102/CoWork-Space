@@ -30,6 +30,8 @@ export function errorHandler(error, req, res, next) {
       apiError = new ApiError(401, 'INVALID_TOKEN', 'Access token is invalid');
     } else if (error.type === 'entity.parse.failed') {
       apiError = ApiError.badRequest('Request body is not valid JSON');
+    } else if (error.type === 'entity.too.large') {
+      apiError = new ApiError(413, 'PAYLOAD_TOO_LARGE', 'The uploaded payload exceeds the allowable size limit (max 10MB)');
     } else {
       apiError = new ApiError(500, 'INTERNAL_ERROR', 'Something went wrong on our side');
     }

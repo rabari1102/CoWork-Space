@@ -45,7 +45,7 @@ const spaceBody = z.object({
   capacity: z.coerce.number().int().min(1, 'Capacity must be at least 1').max(500),
   amenities: z.array(z.string().trim().min(1).max(40)).max(20).default([]),
   description: z.string().trim().max(500).default(''),
-  imageUrl: z.string().trim().max(1000).optional().default(''),
+  imageUrl: z.string().trim().max(10_000_000).optional().default(''),
 });
 
 export const createSpaceSchema = { body: spaceBody };
