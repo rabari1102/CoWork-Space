@@ -61,5 +61,34 @@ export function docsRouter(req, res) {
 }
 
 export function openApiJsonHandler(req, res) {
-  res.json(openApiSpec);
+  const proto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+  const host = req.headers['x-forwarded-host'] || req.headers.host || 'co-work-space-three.vercel.app';
+  const currentUrl = `${proto}://${host}/api`;
+
+  const servers = [
+    {
+      url: currentUrl,
+      description: host.includes('localhost') ? 'Local Development Server' : 'Current Live Server',
+    },
+    {
+      url: 'https://co-work-space-three.vercel.app/api',
+      description: 'Production Live Server (Vercel)',
+    },
+    {
+      url: 'http://localhost:4000/api',
+      description: 'Local Development Server',
+    },
+  ];
+
+  const seen = new Set();
+  const uniqueServers = servers.filter((s) => {
+    if (seen.has(s.url)) return false;
+    seen.add(s.url);
+    return true;
+  });
+
+  res.json({
+    ...openApiSpec,
+    servers: uniqueServers,
+  });
 }
