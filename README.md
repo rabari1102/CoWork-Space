@@ -156,34 +156,39 @@ All responses are JSON. Errors always use the same envelope:
 | Method | Path                                          | Access | Notes                                   |
 | ------ | --------------------------------------------- | ------ | --------------------------------------- |
 | GET    | `/api/spaces`                                 | Public | Search, filters, pagination.            |
-| GET    | `/api/spaces/:id`                             | Public | Single space.                           |
+| GET    | `/api/spaces/summary`                         | Public | Lightweight cached workspace summary.   |
+| GET    | `/api/spaces/:id`                             | Public | Single space details.                   |
 | GET    | `/api/spaces/:id/availability?date=`          | Public | Bookings + maintenance for that day.    |
-| POST   | `/api/spaces`                                 | Admin  |                                         |
+| POST   | `/api/spaces`                                 | Admin  | Create space (supports custom image).   |
 | PATCH  | `/api/spaces/:id`                             | Admin  | Partial update.                         |
 | DELETE | `/api/spaces/:id`                             | Admin  | Cascades to its bookings.               |
-| GET    | `/api/spaces/:id/maintenance`                 | Admin  |                                         |
+| GET    | `/api/spaces/:id/maintenance`                 | Admin  | List scheduled maintenance windows.     |
 | POST   | `/api/spaces/:id/maintenance`                 | Admin  | 409 if live bookings sit in the window. |
-| DELETE | `/api/spaces/:id/maintenance/:maintenanceId`  | Admin  |                                         |
-
-Query parameters on `GET /api/spaces`: `search`, `type` (`desk` \| `meeting_room`),
-`minCapacity`, `date`, `startTime`, `endTime`, `page`, `limit`. Supplying `date` (plus
-optionally a time range) returns only spaces with nothing booked and no maintenance in
-that window.
+| DELETE | `/api/spaces/:id/maintenance/:maintenanceId`  | Admin  | Remove a maintenance window.            |
 
 ### Bookings
 
 | Method | Path                        | Access | Notes                                            |
 | ------ | --------------------------- | ------ | ------------------------------------------------ |
-| POST   | `/api/bookings`             | Member | Creates a pending booking.                        |
-| GET    | `/api/bookings/me`          | Member | Own bookings, filter by `status`.                 |
-| PATCH  | `/api/bookings/:id/cancel`  | Member | Own, future, pending or approved only.            |
-| GET    | `/api/bookings`             | Admin  | Filter by `status`, `spaceId`, `date`.            |
-| PATCH  | `/api/bookings/:id/approve` | Admin  | Also auto-rejects overlapping pending bookings.   |
-| PATCH  | `/api/bookings/:id/reject`  | Admin  |                                                   |
+| POST   | `/api/bookings`             | Member | Creates a pending booking.                       |
+| GET    | `/api/bookings/me`          | Member | Own bookings with pagination, filter by `status`.|
+| GET    | `/api/bookings/me/stats`    | Member | Single-query booking metrics aggregation.        |
+| PATCH  | `/api/bookings/:id/cancel`  | Member | Own, future, pending or approved only.           |
+| GET    | `/api/bookings`             | Admin  | Filter by `status`, `spaceId`, `date`.           |
+| PATCH  | `/api/bookings/:id/approve` | Admin  | Also auto-rejects overlapping pending bookings.  |
+| PATCH  | `/api/bookings/:id/reject`  | Admin  | Rejects a pending request.                       |
+
+### System, Docs & Media
+
+| Method | Path                 | Access | Notes                                            |
+| ------ | -------------------- | ------ | ------------------------------------------------ |
+| GET    | `/api/health`        | Public | Live service & PostgreSQL probe with latency/uptime. |
+| GET    | `/api/docs`          | Public | Interactive Swagger UI API documentation.        |
+| GET    | `/api/openapi.json`  | Public | Raw OpenAPI 3.0 specification.                   |
+| POST   | `/api/upload`        | Admin  | Uploads workspace photo (converts to data URI).  |
 
 A Postman collection covering every endpoint is in
-[`postman_collection.json`](postman_collection.json). Log in first - the collection
-stores the tokens in variables and the other requests reuse them.
+[`postman_collection.json`](postman_collection.json).
 
 ---
 
@@ -192,7 +197,7 @@ stores the tokens in variables and the other requests reuse them.
 ```
 users (id, name, email UNIQUE, password_hash, role)
 refresh_tokens (id, user_id, token_hash UNIQUE, expires_at, revoked_at)
-spaces (id, name, type, capacity, amenities[], description)
+spaces (id, name, type, capacity, amenities[], description, image_url)
 maintenance_windows (id, space_id, starts_at, ends_at, reason)
 bookings (id, space_id, user_id, starts_at, ends_at, status)
 ```
@@ -226,95 +231,21 @@ rejected by the database.
 A single error middleware
 ([`middleware/errorHandler.js`](backend/src/middleware/errorHandler.js)) produces the
 envelope above. It knows how to translate Postgres error codes (`23P01` exclusion,
-`23505` unique, `23503` foreign key, `23514` check) and JWT errors, and anything it
-does not recognise becomes a 500 with the details hidden in production.
+`23505` unique, `23503` foreign key, `23514` check), payload size errors, and JWT errors.
 
 Login and register are rate limited to 10 requests per IP per 15 minutes.
 
 ---
 
-## Project layout
+## Live Deployment & Links
 
-```
-backend/
-  migrations/001_init.sql        schema, indexes, exclusion constraint
-  src/
-    config/env.js                environment config, fails fast if a secret is missing
-    db/                          pool, transaction helper, migration runner, seed
-    middleware/                  auth, validate, rate limit, error handler
-    modules/
-      auth/                      register, login, refresh, logout
-      spaces/                    public listing plus admin CRUD
-      maintenance/               blackout windows
-      bookings/                  create, cancel, approve, reject
-    utils/                       ApiError, async wrapper, date helpers, email stub
-frontend/
-  src/
-    api/                         axios instance, refresh interceptor, endpoints
-    context/                     session state and toast notifications
-    components/                  navbar, filters, calendar, modals, admin shell
-    pages/                       listing, detail, login, register, dashboards
-    utils/format.js              wall-clock date and duration formatting
-docker-compose.yml
-```
+- **Live Application:** [https://co-work-space-three.vercel.app](https://co-work-space-three.vercel.app)
+- **Interactive Swagger API Docs:** [https://co-work-space-three.vercel.app/api/docs](https://co-work-space-three.vercel.app/api/docs)
+- **API Health Check:** [https://co-work-space-three.vercel.app/api/health](https://co-work-space-three.vercel.app/api/health)
+- **GitHub Repository:** [https://github.com/rabari1102/CoWork-Space](https://github.com/rabari1102/CoWork-Space)
 
 ---
 
-## Deploying to Vercel
+## Email Notification System
 
-The repo deploys as **two Vercel projects from the same repository**, plus a
-managed Postgres. Vercel does not host a database, and the schema needs the
-`btree_gist` and `pg_trgm` extensions, so the provider has to support them -
-Neon and Supabase both do.
-
-| Project  | Root directory | Framework preset  |
-| -------- | -------------- | ----------------- |
-| Backend  | `backend`      | Express (detected) |
-| Frontend | `frontend`     | Vite (detected)    |
-
-The backend needs no adapter: Vercel detects `src/server.js`, and that file
-exports the Express app as its default export. The bootstrap that waits for the
-database, runs migrations and calls `listen()` is guarded so it only runs when
-the file is executed directly, which is what Docker and `npm run dev` do.
-
-Migrations are **not** run on deploy - a serverless function has no boot step to
-hang them off, and concurrent cold starts would race. Point `DATABASE_URL` at
-the new database and run them once from your machine:
-
-```bash
-cd backend
-npm run seed          # runs migrations, then loads the demo data
-```
-
-Backend environment variables:
-
-| Variable                              | Value                                            |
-| ------------------------------------- | ------------------------------------------------ |
-| `DATABASE_URL`                        | the provider's **pooled** connection string, ending `?sslmode=verify-full` |
-| `JWT_ACCESS_SECRET`                   | a long random string                             |
-| `JWT_REFRESH_SECRET`                  | a different long random string                   |
-| `CORS_ORIGIN`                         | the frontend's deployed URL, no trailing slash   |
-| `TZ`                                  | the venue's timezone, e.g. `UTC`                 |
-
-Frontend environment variable: `VITE_API_URL` set to
-`https://<backend-project>.vercel.app/api`. It is read at build time, so
-changing it needs a redeploy.
-
-`frontend/vercel.json` rewrites every path to `index.html`; without it a deep
-link such as `/admin/bookings` returns 404 because React Router owns that route
-on the client, not the CDN.
-
-Two caveats that come with serverless rather than with this code:
-
-- **Rate limiting is per instance.** `express-rate-limit` keeps its counters in
-  memory, so each function instance enforces its own budget. It still works, but
-  it is weaker than the single-process limit you get under Docker. A shared
-  store (Redis) is the production answer.
-- **Use the pooled connection string.** Each instance opens its own pool, so
-  connecting direct will exhaust the database's connection limit under load.
-
-## What is not included
-
-- Email is a stub. `utils/notifier.js` logs the message that would have been sent on
-  every booking status change rather than talking to a mail provider.
-- There is no deployed link; everything runs locally through Docker Compose.
+Email notifications are implemented as a rich transactional email stub in [`backend/src/utils/notifier.js`](backend/src/utils/notifier.js). On any status change (`approved`, `rejected`, `cancelled`), the backend logs the formatted dispatch info and generates a responsive HTML email template with CoworkDesk branding, status badges, and reservation cards.
