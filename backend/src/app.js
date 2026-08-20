@@ -11,6 +11,7 @@ import { authRouter } from './modules/auth/auth.routes.js';
 import { bookingsRouter } from './modules/bookings/bookings.routes.js';
 import { spacesRouter } from './modules/spaces/spaces.routes.js';
 import { uploadRouter } from './modules/upload/upload.routes.js';
+import { pool } from './db/pool.js';
 
 const app = express();
 
@@ -65,7 +66,35 @@ app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+app.get('/api/health', async (req, res) => {
+  try {
+    const startTime = Date.now();
+    await pool.query('SELECT 1');
+    const dbLatencyMs = Date.now() - startTime;
+
+    res.json({
+      status: 'ok',
+      service: 'cowork-booking-api',
+      timestamp: new Date().toISOString(),
+      uptime: Math.floor(process.uptime()),
+      database: {
+        status: 'connected',
+        latencyMs: dbLatencyMs,
+      },
+      environment: config.env,
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: 'degraded',
+      service: 'cowork-booking-api',
+      timestamp: new Date().toISOString(),
+      database: {
+        status: 'disconnected',
+        error: error.message,
+      },
+    });
+  }
+});
 app.get('/api/docs', docsRouter);
 app.get('/api/openapi.json', openApiJsonHandler);
 
