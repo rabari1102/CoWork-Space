@@ -1,18 +1,41 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { Router } from 'express';
 import multer from 'multer';
 import { authenticate, authorize } from '../../middleware/auth.js';
 import { ApiError } from '../../utils/ApiError.js';
 
-const uploadDir = path.resolve(process.cwd(), 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+// Determine safe upload directory (serverless environments like Vercel have read-only filesystems except /tmp)
+function getUploadDir() {
+  const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+  if (isServerless) {
+    const tmpDir = path.join(os.tmpdir(), 'uploads');
+    try {
+      if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
+    } catch {}
+    return tmpDir;
+  }
+
+  const localDir = path.resolve(process.cwd(), 'uploads');
+  try {
+    if (!fs.existsSync(localDir)) fs.mkdirSync(localDir, { recursive: true });
+    return localDir;
+  } catch {
+    const fallbackDir = path.join(os.tmpdir(), 'uploads');
+    try {
+      if (!fs.existsSync(fallbackDir)) fs.mkdirSync(fallbackDir, { recursive: true });
+    } catch {}
+    return fallbackDir;
+  }
 }
+
+const uploadDir = getUploadDir();
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
-    cb(null, uploadDir);
+    const targetDir = getUploadDir();
+    cb(null, targetDir);
   },
   filename: (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase() || '.jpg';

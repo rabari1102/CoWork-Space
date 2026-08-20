@@ -1,3 +1,5 @@
+import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import compression from 'compression';
 import cors from 'cors';
@@ -12,9 +14,20 @@ import { uploadRouter } from './modules/upload/upload.routes.js';
 
 const app = express();
 
-// Serve static uploads
-const uploadDir = path.resolve(process.cwd(), 'uploads');
-app.use('/uploads', express.static(uploadDir));
+// Serve static uploads safely (supports standard disk as well as serverless /tmp)
+try {
+  const localUploadDir = path.resolve(process.cwd(), 'uploads');
+  if (fs.existsSync(localUploadDir)) {
+    app.use('/uploads', express.static(localUploadDir));
+  }
+} catch {}
+
+try {
+  const tmpUploadDir = path.join(os.tmpdir(), 'uploads');
+  if (fs.existsSync(tmpUploadDir)) {
+    app.use('/uploads', express.static(tmpUploadDir));
+  }
+} catch {}
 
 // Behind a proxy (nginx in Docker, the platform edge when deployed), so trust
 // one hop for the client IP the rate limiter keys on.
